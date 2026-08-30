@@ -1,9 +1,9 @@
 ## 1. Monorepo & tooling setup
 
-- [ ] 1.1 Initialize pnpm workspace (`pnpm-workspace.yaml` with `apps/*`, `packages/*`) and verify `pnpm install` succeeds at the root
-- [ ] 1.2 Add Turborepo config (`turbo.json`) with `build`, `dev`, `lint`, `test` pipelines and verify `turbo run build` executes across workspace packages
-- [ ] 1.3 Scaffold `apps/backend` (Express + TypeScript) and `apps/web` (Next.js + TypeScript) and verify each starts independently (`pnpm --filter backend dev`, `pnpm --filter web dev`)
-- [ ] 1.4 Configure shared TypeScript/ESLint config, including an import-boundary rule preventing `infrastructure/` from being imported inside `domain/`, and verify a deliberately-violating import fails lint
+- [x] 1.1 Initialize pnpm workspace (`pnpm-workspace.yaml` with `apps/*`, `packages/*`) and verify `pnpm install` succeeds at the root
+- [x] 1.2 Add Turborepo config (`turbo.json`) with `build`, `dev`, `lint`, `test` pipelines and verify `turbo run build` executes across workspace packages
+- [x] 1.3 Scaffold `apps/backend` (Express + TypeScript) and `apps/web` (Next.js + TypeScript) and verify each starts independently (`pnpm --filter backend dev`, `pnpm --filter web dev`)
+- [x] 1.4 Configure shared TypeScript/ESLint config, including an import-boundary rule preventing `infrastructure/` from being imported inside `domain/`, and verify a deliberately-violating import fails lint
 
 ## 2. Database & migrations
 

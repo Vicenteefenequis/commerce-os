@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-commerce_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-commerce_os}
+      POSTGRES_DB: ${POSTGRES_DB:-commerce_os}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-commerce_os}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: build
+    working_dir: /repo/apps/backend
+    command: ["pnpm", "run", "migrate:up"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-cos_session}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  outbox-worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    command: ["node", "dist/worker/outbox-worker.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://backend:4000
+      PORT: 3000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
