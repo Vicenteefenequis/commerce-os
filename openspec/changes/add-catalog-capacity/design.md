@@ -30,17 +30,23 @@ Available capacity is `configured_capacity - SUM(commitments.amount) WHERE statu
 
 Alternatives considered:
 - Mutable counter on the resource/period row: simpler reads, but re-derives nothing from history, makes the "concurrent commitments do not exceed hard capacity" scenario harder to get right without a table-level lock (which serializes all writes to a hot resource), and gives no audit trail of who committed what.
-- Ledger (chosen): a new commitment is an INSERT guarded by a capacity check in the same transaction; SUM is read with `SELECT ... FOR UPDATE` semantics via a serializable check (see D3). Slightly more read cost, but correct under concurrency and self-auditing.
+- Ledger (chosen): a new commitment is an INSERT guarded by a capacity check in the same transaction, serialized against concurrent attempts via an advisory lock (see D3). Slightly more read cost, but correct under concurrency and self-auditing.
 
 This change creates the `resource_capacity_commitments` table and the read-side SUM, but nothing produces commitments yet (see Non-Goals) — that's wired up when Reservation lands. The table exists now so the capacity calculation requirement (CAP-004) has something real to sum over and can be tested end-to-end with directly-inserted test commitments.
 
-### D3: Concurrency control via a Postgres advisory-lock-free row lock on the period row
-To satisfy "concurrent commitments do not exceed hard capacity" (spec scenario) without introducing new infrastructure (no Redis, no distributed lock), the capacity-check-then-insert runs as: `SELECT ... FROM resource_capacity_periods WHERE resource_id = $1 AND period = $2 FOR UPDATE` inside the same transaction as the commitment INSERT. This serializes concurrent commitment attempts against the same resource+period at the database level, consistent with how the rest of the codebase already relies on Postgres transactions (`txRoute`) rather than application-level locking.
+### D3: Concurrency control via a Postgres transaction-scoped advisory lock
+To satisfy "concurrent commitments do not exceed hard capacity" (spec scenario) without introducing new infrastructure (no Redis, no distributed lock), commit-time capacity checks run `SELECT pg_advisory_xact_lock(hashtext(tenant_id || resource_id || period))` before reading configured/committed capacity and inserting the commitment, all inside the same transaction. This serializes concurrent commitment attempts against the same resource+period at the database level, released automatically at commit/rollback, consistent with how the rest of the codebase already relies on Postgres transactions (`txRoute`) rather than application-level locking.
 
-Alternative considered: optimistic concurrency (version column, retry on conflict). Rejected for this slice — pessimistic row lock is simpler to reason about and the contention window (one INSERT) is short; revisit if lock contention becomes a measured problem.
+Revised from an initial plan to `SELECT ... FOR UPDATE` on the `resource_capacity_periods` row: that row does not necessarily exist (a period with no explicit override falls back to the resource's default capacity), so there is nothing to lock without first materializing a row — which would turn "uses the default" into a stale explicit override the moment a commitment is attempted. The advisory lock needs no row to exist.
+
+Alternative considered: optimistic concurrency (version column, retry on conflict). Rejected for this slice — the lock is simpler to reason about and the contention window (one INSERT) is short; revisit if lock contention becomes a measured problem.
 
 ### D4: Capacity period granularity is a plain date, not a datetime range
 `resource_capacity_periods.period` is a `date`. Slot-level (time-of-day) capacity is listed in the PRD as "slots opcionais" for the MVP and is not required by this change's scenarios. Modeling it as `date` now avoids inventing a slot/time-range shape we'd likely have to revise once Availability/Reservation defines how slots actually get queried.
+
+### D5: Audit via outbox events, not inline writes (correction)
+
+The original assumption in this design — audit entries written "in the same transaction as the mutation" — does not match the codebase: the existing `audit` module consumes domain events from the `outbox_events` table asynchronously (see `audit-outbox-consumer.ts`, `registerAuditConsumers`), the same pattern `configuration` already uses (`SetConfigurationUseCase` publishes `configuration.changed` via `OutboxEventPublisher` in the same transaction as the write; the outbox worker later turns that into an `audit_log` row). Product and Resource mutations follow the same pattern: the use case publishes a domain event (`product.created`, `product.updated`, `resource.created`, `resource.capacity_set`, etc.) through `OutboxEventPublisher` inside the same transaction as the write, and `registerAuditConsumers` gains a handler per event type that writes the corresponding `audit_log` row. This preserves the specified behavior (every mutation is audited, idempotently, INV-005) while matching how the rest of the system actually does it — no inline audit write from the catalog/capacity modules themselves.
 
 ## Risks / Trade-offs
 

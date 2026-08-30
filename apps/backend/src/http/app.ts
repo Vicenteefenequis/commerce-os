@@ -4,6 +4,8 @@ import { identityRouter } from "../modules/identity/infrastructure/identity.rout
 import { organizationRouter } from "../modules/organization/infrastructure/organization.routes.js";
 import { venueRouter } from "../modules/venue/infrastructure/venue.routes.js";
 import { configurationRouter } from "../modules/configuration/infrastructure/configuration.routes.js";
+import { productRouter } from "../modules/catalog/infrastructure/product.routes.js";
+import { resourceRouter } from "../modules/capacity/infrastructure/resource.routes.js";
 
 export function createApp() {
   const app = express();
@@ -19,6 +21,8 @@ export function createApp() {
   app.use(organizationRouter);
   app.use(venueRouter);
   app.use(configurationRouter);
+  app.use(productRouter);
+  app.use(resourceRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);

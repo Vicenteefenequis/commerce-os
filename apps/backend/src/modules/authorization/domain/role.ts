@@ -17,11 +17,21 @@ export type Permission =
   | "venue:read"
   | "configuration:manage"
   | "configuration:read"
-  | "audit:read";
+  | "audit:read"
+  | "product:manage"
+  | "product:read"
+  | "resource:manage"
+  | "resource:read";
 
 /**
  * IAM-002: fixed role -> permission mapping for the Foundation phase.
  * Custom/user-defined roles are explicitly out of scope (design.md D8).
+ *
+ * product/resource:read are granted to every role that already reads
+ * venue (catalog and capacity are read to sell/plan), except
+ * access_operator, whose job (PRD persona "Operador de acesso") is
+ * scanning tickets, not browsing catalog/capacity. manage is limited to
+ * owner/admin, consistent with venue:manage.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [
@@ -32,6 +42,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "configuration:manage",
     "configuration:read",
     "audit:read",
+    "product:manage",
+    "product:read",
+    "resource:manage",
+    "resource:read",
   ],
   admin: [
     "organization:read",
@@ -40,12 +54,29 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "configuration:manage",
     "configuration:read",
     "audit:read",
+    "product:manage",
+    "product:read",
+    "resource:manage",
+    "resource:read",
   ],
-  finance: ["organization:read", "venue:read", "configuration:read", "audit:read"],
-  sales: ["organization:read", "venue:read"],
-  operator: ["organization:read", "venue:read"],
+  finance: [
+    "organization:read",
+    "venue:read",
+    "configuration:read",
+    "audit:read",
+    "product:read",
+    "resource:read",
+  ],
+  sales: ["organization:read", "venue:read", "product:read", "resource:read"],
+  operator: ["organization:read", "venue:read", "product:read", "resource:read"],
   access_operator: ["venue:read"],
-  read_only: ["organization:read", "venue:read", "configuration:read"],
+  read_only: [
+    "organization:read",
+    "venue:read",
+    "configuration:read",
+    "product:read",
+    "resource:read",
+  ],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {
