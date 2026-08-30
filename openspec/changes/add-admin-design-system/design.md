@@ -21,12 +21,14 @@ Tailwind supplies the utility/token layer; Radix supplies unstyled, accessible i
 
 Alternative considered: Tailwind alone, hand-built components. Rejected — the accessibility requirements (focus trap, keyboard nav, ARIA) are exactly what Radix already solves correctly; reimplementing them is real engineering cost for no behavioral gain.
 
-### D2: Tokens as CSS custom properties, consumed through Tailwind's theme config
-Colors, spacing, radius, and typography live as CSS custom properties in `globals.css` (e.g. `--color-primary`, `--color-bg`, `--radius-md`), and `tailwind.config.ts` maps Tailwind's theme (`colors.primary`, etc.) to `var(--color-primary)` rather than hardcoding hex values into the Tailwind config directly.
+### D2: Tokens as CSS custom properties, mapped into Tailwind via `@theme` (Tailwind v4 CSS-first config)
+Colors, spacing, radius, and typography live as raw CSS custom properties in `globals.css` (e.g. `--color-primary-500`, `--color-bg`, `--radius-md`). Tailwind v4 is CSS-first — there is no `tailwind.config.ts` theme object to populate; instead an `@theme` block in `globals.css` maps Tailwind-facing tokens to those custom properties (e.g. `--color-primary: var(--color-primary-500);`), which is what makes `bg-primary`/`text-primary` utilities available.
 
-Rationale: this is what makes "token change propagates everywhere" (spec requirement) and light/dark theming work with a single mechanism — dark mode is a `[data-theme="dark"]`/`prefers-color-scheme` block that redefines the custom properties, and every component that used the Tailwind utility (`bg-primary`, `text-fg`) picks up the new value automatically, with no per-component dark-mode logic.
+Rationale: this is what makes "token change propagates everywhere" (spec requirement) and light/dark theming work with a single mechanism — dark mode is a `@media (prefers-color-scheme: dark)` block that redefines the raw custom properties, and every component that used the Tailwind utility (`bg-primary`, `text-fg`) picks up the new value automatically, with no per-component dark-mode logic.
 
 Alternative considered: Tailwind's built-in `dark:` variant with hardcoded dark-mode utility classes sprinkled per component. Rejected — that scales linearly with component count and risks drift (a class added to one component's light state but not its dark state); redefining custom properties once in `globals.css` cannot drift by construction.
+
+Corrected from the original plan, which assumed Tailwind v3's `tailwind.config.ts` theme-mapping API — the current stable release is Tailwind v4, which replaced that with CSS-first `@theme` configuration; no JS/TS config file is required for this change's needs.
 
 ### D3: Base components live in `apps/web/components/ui/`, one file per component
 Each base component (`button.tsx`, `dialog.tsx`, `table.tsx`, etc.) is a thin wrapper: Radix primitive (where one exists) + Tailwind classes + the variant/size API the CRUD screens will need (e.g. `Button` variants: `primary`, `secondary`, `destructive`, `ghost`). No component library dependency (shadcn/ui, MUI) is installed wholesale — components are hand-written against Radix, following the same shape the `shadcn/ui` convention uses (copy-owned code, not an installed package), so the team can freely modify component internals without fighting an upstream API.
