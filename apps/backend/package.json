@@ -12,8 +12,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "migrate:up": "node-pg-migrate up -m migrations -j cjs --envPath ../../.env",
-    "migrate:down": "node-pg-migrate down -m migrations -j cjs --envPath ../../.env"
+    "migrate:up": "node-pg-migrate up -m migrations --envPath ../../.env",
+    "migrate:down": "node-pg-migrate down -m migrations --envPath ../../.env"
   },
   "dependencies": {
     "argon2": "^0.41.1",

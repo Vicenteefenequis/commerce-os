@@ -23,7 +23,10 @@ services:
     working_dir: /repo/apps/backend
     command: ["pnpm", "run", "migrate:up"]
     environment:
+      # Runs as the privileged/owner role (creates tables, roles, RLS policies).
       DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-commerce_os_app}
+      OUTBOX_DB_PASSWORD: ${OUTBOX_DB_PASSWORD:-commerce_os_outbox}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,7 +40,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      # Connects as the non-superuser app_user role, so RLS (design.md D4)
+      # is actually enforced - superusers and table owners bypass RLS.
+      DATABASE_URL: postgres://app_user:${APP_DB_PASSWORD:-commerce_os_app}@postgres:5432/${POSTGRES_DB:-commerce_os}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-cos_session}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
     depends_on:
@@ -58,7 +63,10 @@ services:
     command: ["node", "dist/worker/outbox-worker.js"]
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:-commerce_os}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      # Dedicated role with cross-tenant SELECT on outbox_events only
+      # (design.md D6 / see migration 1700000008000) - the worker must
+      # scan pending events across all tenants; app_user cannot.
+      DATABASE_URL: postgres://outbox_worker_user:${OUTBOX_DB_PASSWORD:-commerce_os_outbox}@postgres:5432/${POSTGRES_DB:-commerce_os}
     depends_on:
       postgres:
         condition: service_healthy

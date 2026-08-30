@@ -1,6 +1,8 @@
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
+  pgm.createExtension("citext", { ifNotExists: true });
+
   pgm.createTable("users", {
     id: { type: "uuid", primaryKey: true, default: pgm.func("gen_random_uuid()") },
     tenant_id: {
@@ -14,7 +16,6 @@ exports.up = (pgm) => {
     created_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
     updated_at: { type: "timestamptz", notNull: true, default: pgm.func("now()") },
   });
-  pgm.createExtension("citext", { ifNotExists: true });
   pgm.createIndex("users", "tenant_id");
   pgm.addConstraint("users", "users_tenant_email_unique", {
     unique: ["tenant_id", "email"],
