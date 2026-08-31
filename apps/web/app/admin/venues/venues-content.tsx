@@ -39,30 +39,32 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
   }
 
   return (
-    <ListPageLayout
-      title="Unidades"
-      description="Venues cadastradas para este tenant."
-      createLabel="Nova unidade"
-      onCreate={() => setDialogOpen(true)}
-      isEmpty={venues.length === 0}
-      emptyStateDescription="Nenhuma unidade cadastrada ainda."
-    >
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableHeaderCell>ID</TableHeaderCell>
-            <TableHeaderCell>Nome</TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {venues.map((venue) => (
-            <TableRow key={venue.id}>
-              <TableCell className="font-mono text-xs">{venue.id}</TableCell>
-              <TableCell>{venue.name}</TableCell>
+    <>
+      <ListPageLayout
+        title="Unidades"
+        description="Venues cadastradas para este tenant."
+        createLabel="Nova unidade"
+        onCreate={() => setDialogOpen(true)}
+        isEmpty={venues.length === 0}
+        emptyStateDescription="Nenhuma unidade cadastrada ainda."
+      >
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>ID</TableHeaderCell>
+              <TableHeaderCell>Nome</TableHeaderCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {venues.map((venue) => (
+              <TableRow key={venue.id}>
+                <TableCell className="font-mono text-xs">{venue.id}</TableCell>
+                <TableCell>{venue.name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ListPageLayout>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Nova unidade">
         <FormPageLayout
@@ -75,6 +77,6 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
           <Input label="Nome" name="name" required />
         </FormPageLayout>
       </Dialog>
-    </ListPageLayout>
+    </>
   );
 }

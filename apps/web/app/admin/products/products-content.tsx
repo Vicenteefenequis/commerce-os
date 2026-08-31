@@ -52,7 +52,7 @@ export function ProductsContent({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function onSelectVenue(nextVenueId: string) {
-    router.push(`/products?venueId=${nextVenueId}`);
+    router.push(`/admin/products?venueId=${nextVenueId}`);
   }
 
   function updateVariantDraft(index: number, field: keyof VariantDraft, value: string) {
@@ -170,73 +170,73 @@ export function ProductsContent({
             ))}
           </TableBody>
         </Table>
+      </ListPageLayout>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Novo produto">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Novo produto">
+        <FormPageLayout
+          title=""
+          onSubmit={onSubmit}
+          onCancel={() => setDialogOpen(false)}
+          isSubmitting={isSubmitting}
+          fieldErrors={fieldErrors}
+        >
+          <Input label="Nome" name="name" required />
+          <Input label="Disponível de" name="availableFrom" type="date" />
+          <Input label="Disponível até" name="availableUntil" type="date" />
+          <Input label="Canais (separados por vírgula)" name="channels" placeholder="online, loja" />
+
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-fg">Variantes</span>
+            {variantDrafts.map((draft, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  label="Nome da variante"
+                  value={draft.name}
+                  onChange={(e) => updateVariantDraft(index, "name", e.target.value)}
+                />
+                <Input
+                  label="Preço (R$)"
+                  type="number"
+                  step="0.01"
+                  value={draft.price}
+                  onChange={(e) => updateVariantDraft(index, "price", e.target.value)}
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setVariantDrafts((current) => [...current, { name: "", price: "" }])}
+            >
+              + Adicionar variante
+            </Button>
+          </div>
+        </FormPageLayout>
+      </Dialog>
+
+      <Dialog
+        open={priceDialog !== null}
+        onOpenChange={(open) => !open && setPriceDialog(null)}
+        title={priceDialog ? `Preço de ${priceDialog.variant.name}` : ""}
+      >
+        {priceDialog && (
           <FormPageLayout
             title=""
-            onSubmit={onSubmit}
-            onCancel={() => setDialogOpen(false)}
+            onSubmit={onSetPrice}
+            onCancel={() => setPriceDialog(null)}
             isSubmitting={isSubmitting}
-            fieldErrors={fieldErrors}
           >
-            <Input label="Nome" name="name" required />
-            <Input label="Disponível de" name="availableFrom" type="date" />
-            <Input label="Disponível até" name="availableUntil" type="date" />
-            <Input label="Canais (separados por vírgula)" name="channels" placeholder="online, loja" />
-
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-fg">Variantes</span>
-              {variantDrafts.map((draft, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    label="Nome da variante"
-                    value={draft.name}
-                    onChange={(e) => updateVariantDraft(index, "name", e.target.value)}
-                  />
-                  <Input
-                    label="Preço (R$)"
-                    type="number"
-                    step="0.01"
-                    value={draft.price}
-                    onChange={(e) => updateVariantDraft(index, "price", e.target.value)}
-                  />
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setVariantDrafts((current) => [...current, { name: "", price: "" }])}
-              >
-                + Adicionar variante
-              </Button>
-            </div>
+            <Input
+              label="Novo preço (R$)"
+              name="price"
+              type="number"
+              step="0.01"
+              defaultValue={(priceDialog.variant.priceCents / 100).toFixed(2)}
+              required
+            />
           </FormPageLayout>
-        </Dialog>
-
-        <Dialog
-          open={priceDialog !== null}
-          onOpenChange={(open) => !open && setPriceDialog(null)}
-          title={priceDialog ? `Preço de ${priceDialog.variant.name}` : ""}
-        >
-          {priceDialog && (
-            <FormPageLayout
-              title=""
-              onSubmit={onSetPrice}
-              onCancel={() => setPriceDialog(null)}
-              isSubmitting={isSubmitting}
-            >
-              <Input
-                label="Novo preço (R$)"
-                name="price"
-                type="number"
-                step="0.01"
-                defaultValue={(priceDialog.variant.priceCents / 100).toFixed(2)}
-                required
-              />
-            </FormPageLayout>
-          )}
-        </Dialog>
-      </ListPageLayout>
+        )}
+      </Dialog>
     </div>
   );
 }

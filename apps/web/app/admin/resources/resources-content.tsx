@@ -47,7 +47,7 @@ export function ResourcesContent({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function onSelectVenue(nextVenueId: string) {
-    router.push(`/resources?venueId=${nextVenueId}`);
+    router.push(`/admin/resources?venueId=${nextVenueId}`);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -176,71 +176,71 @@ export function ResourcesContent({
             ))}
           </TableBody>
         </Table>
+      </ListPageLayout>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Novo recurso">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Novo recurso">
+        <FormPageLayout
+          title=""
+          onSubmit={onSubmit}
+          onCancel={() => setDialogOpen(false)}
+          isSubmitting={isSubmitting}
+          fieldErrors={fieldErrors}
+        >
+          <Input label="Nome" name="name" required />
+          <Input label="Capacidade padrão" name="defaultCapacity" type="number" required />
+          <Select
+            label="Capacidade rígida?"
+            name="hardCapacity"
+            options={[
+              { value: "no", label: "Não (flexível)" },
+              { value: "yes", label: "Sim (rígida)" },
+            ]}
+            placeholder="Selecione"
+          />
+        </FormPageLayout>
+      </Dialog>
+
+      <Dialog
+        open={capacityDialog !== null}
+        onOpenChange={(open) => !open && setCapacityDialog(null)}
+        title={capacityDialog ? `Capacidade de ${capacityDialog.name}` : ""}
+      >
+        {capacityDialog && (
           <FormPageLayout
             title=""
-            onSubmit={onSubmit}
-            onCancel={() => setDialogOpen(false)}
+            onSubmit={onSetCapacity}
+            onCancel={() => setCapacityDialog(null)}
             isSubmitting={isSubmitting}
-            fieldErrors={fieldErrors}
           >
-            <Input label="Nome" name="name" required />
-            <Input label="Capacidade padrão" name="defaultCapacity" type="number" required />
-            <Select
-              label="Capacidade rígida?"
-              name="hardCapacity"
-              options={[
-                { value: "no", label: "Não (flexível)" },
-                { value: "yes", label: "Sim (rígida)" },
-              ]}
-              placeholder="Selecione"
-            />
+            <Input label="Período (ex: 2026-08-30)" name="period" required />
+            <Input label="Capacidade" name="capacity" type="number" required />
           </FormPageLayout>
-        </Dialog>
+        )}
+      </Dialog>
 
-        <Dialog
-          open={capacityDialog !== null}
-          onOpenChange={(open) => !open && setCapacityDialog(null)}
-          title={capacityDialog ? `Capacidade de ${capacityDialog.name}` : ""}
-        >
-          {capacityDialog && (
-            <FormPageLayout
-              title=""
-              onSubmit={onSetCapacity}
-              onCancel={() => setCapacityDialog(null)}
-              isSubmitting={isSubmitting}
-            >
-              <Input label="Período (ex: 2026-08-30)" name="period" required />
-              <Input label="Capacidade" name="capacity" type="number" required />
-            </FormPageLayout>
-          )}
-        </Dialog>
-
-        <Dialog
-          open={availabilityDialog !== null}
-          onOpenChange={(open) => !open && setAvailabilityDialog(null)}
-          title={availabilityDialog ? `Disponibilidade de ${availabilityDialog.name}` : ""}
-        >
-          {availabilityDialog && (
-            <FormPageLayout
-              title=""
-              onSubmit={onCheckAvailability}
-              onCancel={() => setAvailabilityDialog(null)}
-              submitLabel="Consultar"
-              isSubmitting={isSubmitting}
-            >
-              <Input label="Período (ex: 2026-08-30)" name="period" required />
-              {availabilityResult && (
-                <p className="text-sm text-fg">
-                  Disponível em {availabilityResult.period}:{" "}
-                  <span className="font-semibold">{availabilityResult.available}</span>
-                </p>
-              )}
-            </FormPageLayout>
-          )}
-        </Dialog>
-      </ListPageLayout>
+      <Dialog
+        open={availabilityDialog !== null}
+        onOpenChange={(open) => !open && setAvailabilityDialog(null)}
+        title={availabilityDialog ? `Disponibilidade de ${availabilityDialog.name}` : ""}
+      >
+        {availabilityDialog && (
+          <FormPageLayout
+            title=""
+            onSubmit={onCheckAvailability}
+            onCancel={() => setAvailabilityDialog(null)}
+            submitLabel="Consultar"
+            isSubmitting={isSubmitting}
+          >
+            <Input label="Período (ex: 2026-08-30)" name="period" required />
+            {availabilityResult && (
+              <p className="text-sm text-fg">
+                Disponível em {availabilityResult.period}:{" "}
+                <span className="font-semibold">{availabilityResult.available}</span>
+              </p>
+            )}
+          </FormPageLayout>
+        )}
+      </Dialog>
     </div>
   );
 }
