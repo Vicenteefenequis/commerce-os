@@ -71,15 +71,20 @@ Changes: `archive/2026-08-31-add-payment`, `archive/2026-08-31-add-order-fulfill
 
 Change: `archive/2026-08-31-add-entitlement-ticket`
 
-### M5 — Access Control
+### M5 — Access Control ✅ concluído (parcial — sem UI de scanner ainda)
 
-- Scanner web/PWA (ACS-001)
-- Resposta clara: autorizado / já utilizado / inválido / expirado / local incorreto / horário incorreto (ACS-002)
-- Consumo atômico do entitlement, proteção contra double scanning (ACS-004/005)
+- `POST /access/scan`: resolve o código do Ticket contra o `venueId` selecionado na sessão do operador (sem vínculo fixo `User -> Venue`)
+- Resposta clara: autorizado / já utilizado / inválido / local incorreto / horário incorreto / expirado (ACS-002), como seis outcomes distintos
+- Local incorreto: comparação direta `venueId` da sessão vs `Order.venueId`, sem depender de Resource/Reservation
+- Horário incorreto/expirado: aplicado apenas quando o `OrderLine` tem uma Reservation vinculada, comparando `Reservation.period` (antes do início = horário incorreto, depois do fim = expirado); produtos sem reserva (visita livre) não têm essa checagem
+- Consumo atômico do entitlement (`issued -> consumed`) via UPDATE condicional, proteção contra double scanning (ACS-004/005)
+- Toda tentativa de scan é registrada, autorizada ou não
+- Nova permission `entitlement:consume` (`access_operator`, `owner`, `admin`)
+- Sem UI de storefront/scanner (PWA/web) — apenas API; sem estratégia de conectividade intermitente (ACS-006, explicitamente futuro no PRD); sem tickets multi-uso (TKT-006, fora do MVP)
 
-**Marco PRD: "primeiro visitante entrando utilizando exclusivamente a plataforma."**
+**Marco PRD: "primeiro visitante entrando utilizando exclusivamente a plataforma."** — atingível via API; falta a UI de scanner para operação real no piloto.
 
-Status: não iniciado
+Change: `archive/2026-08-31-add-access-control`
 
 ### M6 — Dashboard mínimo
 

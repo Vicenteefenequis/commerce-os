@@ -31,7 +31,7 @@
 
 - [x] 6.1 Register the new route in the app's route composition alongside existing module routes; verify app boots
 - [x] 6.2 Run full backend test suite and confirm no regression in existing ticketing/entitlement tests after the status enum change
-- [ ] 6.3 Update `docs/ROADMAP.md` M5 entry to reference this change once merged (done at archive time, not here)
+- [x] 6.3 Update `docs/ROADMAP.md` M5 entry to reference this change once merged (done at archive time, not here)
 
 ## 7. Explicitly out of scope (not tasked here)
 
