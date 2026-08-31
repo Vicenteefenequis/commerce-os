@@ -1,6 +1,8 @@
 import type { EventPublisherPort } from "../../../shared-kernel/ports.js";
 import type { OrderRepositoryPort } from "../../commerce/domain/ports.js";
 import { TransitionOrderStatusUseCase } from "../../commerce/application/transition-order-status.usecase.js";
+import { ConfirmReservationUseCase } from "../../capacity/application/confirm-reservation.usecase.js";
+import type { ReservationRepositoryPort } from "../../capacity/domain/ports.js";
 import type { ProviderWebhookEvent } from "../domain/ports.js";
 import type { PaymentEventRepositoryPort, PaymentRepositoryPort } from "../domain/ports.js";
 import { paymentFailedEvent, paymentSucceededEvent } from "../domain/events.js";
@@ -18,16 +20,18 @@ const PAYMENT_INTENT_FAILED = "payment_intent.payment_failed";
 /**
  * spec: payments/payment - "Webhook processing is idempotent",
  * "Payment confirmation never relies solely on browser redirect",
- * "Successful payment transitions the Order to paid". This is the ONLY
- * code path that ever transitions a Payment out of `pending` - the
- * payment page (apps/web) only ever reads status, never sets it
- * (design.md - Redirect vs. webhook).
+ * "Successful payment transitions the Order to paid" (now also
+ * "Payment confirms held reservations"). This is the ONLY code path
+ * that ever transitions a Payment out of `pending` - the payment page
+ * (apps/web) only ever reads status, never sets it (design.md -
+ * Redirect vs. webhook).
  */
 export class ProcessStripeWebhookUseCase {
   constructor(
     private readonly events: PaymentEventRepositoryPort,
     private readonly payments: PaymentRepositoryPort,
     private readonly orders: OrderRepositoryPort,
+    private readonly reservations: ReservationRepositoryPort,
     private readonly eventPublisher: EventPublisherPort,
   ) {}
 
@@ -67,6 +71,18 @@ export class ProcessStripeWebhookUseCase {
         to: "paid",
         actorUserId: input.actorUserId,
       });
+
+      const order = await this.orders.findById(input.tenantId, payment.orderId);
+      const confirmReservation = new ConfirmReservationUseCase(this.reservations, this.eventPublisher);
+      for (const line of order?.lines ?? []) {
+        if (line.reservationId) {
+          await confirmReservation.execute({
+            tenantId: input.tenantId,
+            reservationId: line.reservationId,
+            actorUserId: input.actorUserId,
+          });
+        }
+      }
 
       await this.eventPublisher.publish([
         paymentSucceededEvent(input.tenantId, {
