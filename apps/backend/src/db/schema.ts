@@ -153,6 +153,15 @@ export interface ReservationsTable {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CustomersTable {
+  id: Generated<string>;
+  tenant_id: string;
+  email: string;
+  name: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 export type OrderStatus =
   | "draft"
   | "awaiting_payment"
@@ -167,6 +176,7 @@ export interface OrdersTable {
   id: Generated<string>;
   tenant_id: string;
   venue_id: string;
+  customer_id: string;
   status: OrderStatus;
   idempotency_key: string | null;
   created_at: Generated<Timestamp>;
@@ -233,6 +243,34 @@ export interface PaymentStatusHistoryTable {
   created_at: Generated<Timestamp>;
 }
 
+export interface EntitlementsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  order_id: string;
+  order_line_id: string;
+  customer_id: string;
+  status: Generated<"issued">;
+  created_at: Generated<Timestamp>;
+}
+
+export interface TicketsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  entitlement_id: string;
+  code: string;
+  issued_at: Generated<Timestamp>;
+}
+
+export type TicketDeliveryStatus = "sent" | "failed" | "not_configured";
+
+export interface TicketDeliveriesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  order_id: string;
+  status: TicketDeliveryStatus;
+  attempted_at: Generated<Timestamp>;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   venues: VenuesTable;
@@ -249,10 +287,14 @@ export interface Database {
   resource_capacity_commitments: ResourceCapacityCommitmentsTable;
   leads: LeadsTable;
   reservations: ReservationsTable;
+  customers: CustomersTable;
   orders: OrdersTable;
   order_lines: OrderLinesTable;
   order_status_history: OrderStatusHistoryTable;
   payments: PaymentsTable;
   payment_events: PaymentEventsTable;
   payment_status_history: PaymentStatusHistoryTable;
+  entitlements: EntitlementsTable;
+  tickets: TicketsTable;
+  ticket_deliveries: TicketDeliveriesTable;
 }

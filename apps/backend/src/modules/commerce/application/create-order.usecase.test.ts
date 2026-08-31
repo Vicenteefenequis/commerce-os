@@ -15,6 +15,26 @@ import type { DomainEvent } from "../../../events/domain-event.js";
 import type { EventPublisherPort } from "../../../shared-kernel/ports.js";
 import { ORDER_CREATED } from "../domain/events.js";
 import { VariantNotFoundError, EmptyCartError } from "./order-errors.js";
+import { Customer } from "../../customer/domain/customer.entity.js";
+import type { CreateCustomerInput, CustomerRepositoryPort } from "../../customer/domain/ports.js";
+
+class FakeCustomerRepository implements CustomerRepositoryPort {
+  public customers: Customer[] = [];
+  async create(input: CreateCustomerInput): Promise<Customer> {
+    const customer = Customer.create(input);
+    this.customers.push(customer);
+    return customer;
+  }
+  async findByEmail(tenantId: string, email: string): Promise<Customer | null> {
+    return (
+      this.customers.find((c) => c.tenantId === tenantId && c.email.toLowerCase() === email.toLowerCase()) ?? null
+    );
+  }
+  async findById(tenantId: string, id: string): Promise<Customer | null> {
+    return this.customers.find((c) => c.tenantId === tenantId && c.id === id) ?? null;
+  }
+  async updateName(): Promise<void> {}
+}
 
 class FakeProductRepository implements Pick<ProductRepositoryPort, "findVariantById"> {
   constructor(private readonly variants: VariantLookup[]) {}
@@ -92,6 +112,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       id: input.id,
       tenantId: input.tenantId,
       venueId: input.venueId,
+      customerId: input.customerId,
       status: "draft",
       idempotencyKey: input.idempotencyKey,
       lines: input.lines.map((l) => OrderLine.create({ ...l, orderId: input.id, tenantId: input.tenantId })),
@@ -161,11 +182,14 @@ describe("CreateOrderUseCase", () => {
     resourceId: resource.id,
   };
 
+  const customer = { email: "ana@example.com", name: "Ana" };
+
   function buildUseCase(opts: { commitAccepts: boolean }) {
     const products = new FakeProductRepository([freeVariant, bookedVariant]) as unknown as ProductRepositoryPort;
     const commitments = new FakeCommitmentRepository(opts.commitAccepts);
     const reservations = new FakeReservationRepository();
     const orders = new FakeOrderRepository();
+    const customers = new FakeCustomerRepository();
     const publisher = new FakeEventPublisher();
     const useCase = new CreateOrderUseCase(
       products,
@@ -173,9 +197,10 @@ describe("CreateOrderUseCase", () => {
       commitments,
       reservations,
       orders,
+      customers,
       publisher,
     );
-    return { useCase, orders, reservations, publisher };
+    return { useCase, orders, reservations, customers, publisher };
   }
 
   it("recalculates price server-side and holds capacity for lines with a resourceId", async () => {
@@ -184,6 +209,7 @@ describe("CreateOrderUseCase", () => {
     const order = await useCase.execute({
       tenantId,
       venueId,
+      customer,
       lines: [
         { variantId: freeVariant.id, quantity: 2 },
         { variantId: bookedVariant.id, quantity: 3, period: "2026-06-15" },
@@ -210,6 +236,7 @@ describe("CreateOrderUseCase", () => {
       useCase.execute({
         tenantId,
         venueId,
+        customer,
         lines: [{ variantId: bookedVariant.id, quantity: 3, period: "2026-06-15" }],
         holdExpiresAt: new Date(Date.now() + 900_000),
         actorUserId,
@@ -221,7 +248,7 @@ describe("CreateOrderUseCase", () => {
   it("rejects a checkout with no lines", async () => {
     const { useCase } = buildUseCase({ commitAccepts: true });
     await expect(
-      useCase.execute({ tenantId, venueId, lines: [], holdExpiresAt: new Date(), actorUserId }),
+      useCase.execute({ tenantId, venueId, customer, lines: [], holdExpiresAt: new Date(), actorUserId }),
     ).rejects.toBeInstanceOf(EmptyCartError);
   });
 
@@ -231,6 +258,7 @@ describe("CreateOrderUseCase", () => {
       useCase.execute({
         tenantId,
         venueId,
+        customer,
         lines: [{ variantId: randomUUID(), quantity: 1 }],
         holdExpiresAt: new Date(Date.now() + 900_000),
         actorUserId,
@@ -245,6 +273,7 @@ describe("CreateOrderUseCase", () => {
     const first = await useCase.execute({
       tenantId,
       venueId,
+      customer,
       lines: [{ variantId: freeVariant.id, quantity: 1 }],
       holdExpiresAt: new Date(Date.now() + 900_000),
       actorUserId,
@@ -253,6 +282,7 @@ describe("CreateOrderUseCase", () => {
     const second = await useCase.execute({
       tenantId,
       venueId,
+      customer,
       lines: [{ variantId: freeVariant.id, quantity: 1 }],
       holdExpiresAt: new Date(Date.now() + 900_000),
       actorUserId,

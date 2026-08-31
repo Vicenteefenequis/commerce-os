@@ -17,6 +17,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       id: randomUUID(),
       tenantId,
       venueId: randomUUID(),
+      customerId: randomUUID(),
       status,
       lines: [
         OrderLine.create({
@@ -57,6 +58,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       id: this.order.id,
       tenantId: this.order.tenantId,
       venueId: this.order.venueId,
+      customerId: this.order.customerId,
       status: to,
       idempotencyKey: this.order.idempotencyKey,
       lines: this.order.lines,

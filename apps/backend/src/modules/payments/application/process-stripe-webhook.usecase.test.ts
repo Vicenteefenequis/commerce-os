@@ -102,6 +102,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       id: this.order.id,
       tenantId: this.order.tenantId,
       venueId: this.order.venueId,
+      customerId: this.order.customerId,
       status: to,
       lines: this.order.lines,
     });
@@ -178,6 +179,7 @@ function makeOrder(tenantId: string, status: OrderStatus, reservationId: string 
     id: randomUUID(),
     tenantId,
     venueId: randomUUID(),
+    customerId: randomUUID(),
     status,
     lines: [
       OrderLine.create({

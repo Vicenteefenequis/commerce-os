@@ -11,6 +11,7 @@ import { KyselyCapacityCommitmentRepository } from "../../capacity/infrastructur
 import { KyselyCapacityPeriodRepository } from "../../capacity/infrastructure/capacity-period-repository.kysely.js";
 import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
 import { GetAvailableCapacityUseCase } from "../../capacity/application/get-available-capacity.usecase.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
 import { CreateOrderUseCase } from "../application/create-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
 import { CancelOrderUseCase } from "../application/cancel-order.usecase.js";
@@ -108,6 +109,7 @@ async function checkout(
   venueId: string,
   lines: Array<{ variantId: string; quantity: number; period?: string }>,
   idempotencyKey?: string,
+  customer: { email: string; name: string } = { email: "ana@example.com", name: "Ana" },
 ) {
   return db.transaction().execute(async (trx) => {
     await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
@@ -118,11 +120,13 @@ async function checkout(
       new KyselyCapacityCommitmentRepository(trx),
       new KyselyReservationRepository(trx),
       new KyselyOrderRepository(trx),
+      new KyselyCustomerRepository(trx),
       new OutboxEventPublisher(trx),
     );
     return useCase.execute({
       tenantId,
       venueId,
+      customer,
       lines,
       idempotencyKey: idempotencyKey ?? null,
       holdExpiresAt: new Date(Date.now() + 900_000),

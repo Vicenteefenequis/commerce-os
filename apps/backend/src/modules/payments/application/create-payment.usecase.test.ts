@@ -22,6 +22,7 @@ function makeOrder(tenantId: string, status: OrderStatus, totalCents: number): O
     id: randomUUID(),
     tenantId,
     venueId: randomUUID(),
+    customerId: randomUUID(),
     status,
     lines: [
       OrderLine.create({

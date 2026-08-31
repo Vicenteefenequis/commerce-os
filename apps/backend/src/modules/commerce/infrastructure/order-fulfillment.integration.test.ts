@@ -16,6 +16,7 @@ import { CreateOrderUseCase } from "../application/create-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
 import { FulfillOrderUseCase } from "../application/fulfill-order.usecase.js";
 import { InvalidOrderTransitionError } from "../application/order-errors.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
 
@@ -102,11 +103,13 @@ async function checkout(
       new KyselyCapacityCommitmentRepository(trx),
       new KyselyReservationRepository(trx),
       new KyselyOrderRepository(trx),
+      new KyselyCustomerRepository(trx),
       new OutboxEventPublisher(trx),
     );
     return useCase.execute({
       tenantId,
       venueId,
+      customer: { email: "ana@example.com", name: "Ana" },
       lines,
       idempotencyKey: null,
       holdExpiresAt: new Date(Date.now() + 900_000),
