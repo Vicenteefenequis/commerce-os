@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
 
   if (request.nextUrl.pathname === "/admin/login") {
     return isAuthenticated
-      ? NextResponse.redirect(new URL("/admin/venues", request.url))
+      ? NextResponse.redirect(new URL("/admin/dashboard", request.url))
       : NextResponse.next();
   }
 
@@ -26,5 +26,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/login", "/admin/venues", "/admin/products", "/admin/resources"],
+  matcher: ["/admin/login", "/admin/dashboard", "/admin/venues", "/admin/products", "/admin/resources"],
 };

@@ -3,7 +3,7 @@ import { sql } from "kysely";
 import type { Trx } from "../../../http/tx-route.js";
 import { Order, OrderLine } from "../domain/order.entity.js";
 import type { OrderStatus } from "../domain/order.entity.js";
-import type { CreateOrderInput, OrderRepositoryPort } from "../domain/ports.js";
+import type { CreateOrderInput, OrderListFilters, OrderRepositoryPort } from "../domain/ports.js";
 
 export class KyselyOrderRepository implements OrderRepositoryPort {
   constructor(private readonly trx: Trx) {}
@@ -82,13 +82,30 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     return this.toDomain(row, lineRows);
   }
 
-  async findAllByTenant(tenantId: string): Promise<Order[]> {
-    const rows = await this.trx
-      .selectFrom("orders")
-      .selectAll()
-      .where("tenant_id", "=", tenantId)
-      .orderBy("created_at", "desc")
-      .execute();
+  async findAllByTenant(tenantId: string, filters?: OrderListFilters): Promise<Order[]> {
+    let query = this.trx.selectFrom("orders").selectAll("orders").where("orders.tenant_id", "=", tenantId);
+
+    if (filters?.orderId) {
+      query = query.where("orders.id", "=", filters.orderId);
+    }
+    if (filters?.status) {
+      query = query.where("orders.status", "=", filters.status);
+    }
+    if (filters?.customerQuery) {
+      const pattern = `%${filters.customerQuery}%`;
+      query = query.where((eb) =>
+        eb.exists(
+          eb
+            .selectFrom("customers")
+            .select("customers.id")
+            .whereRef("customers.id", "=", "orders.customer_id")
+            .where("customers.tenant_id", "=", tenantId)
+            .where((eb2) => eb2.or([eb2("customers.email", "ilike", pattern), eb2("customers.name", "ilike", pattern)])),
+        ),
+      );
+    }
+
+    const rows = await query.orderBy("orders.created_at", "desc").execute();
     if (rows.length === 0) return [];
 
     const lineRows = await this.trx

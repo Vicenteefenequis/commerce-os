@@ -40,7 +40,12 @@ afterAll(async () => {
   }
 });
 
-async function seedOrder(tenantId: string, venueId: string, name: string) {
+async function seedOrder(
+  tenantId: string,
+  venueId: string,
+  name: string,
+  customer: { email: string; name: string } = { email: "ana@example.com", name: "Ana" },
+) {
   const variantId = await db.transaction().execute(async (trx) => {
     await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
     const product = await new KyselyProductRepository(trx).create({
@@ -67,7 +72,7 @@ async function seedOrder(tenantId: string, venueId: string, name: string) {
     ).execute({
       tenantId,
       venueId,
-      customer: { email: "ana@example.com", name: "Ana" },
+      customer,
       lines: [{ variantId, quantity: 1 }],
       holdExpiresAt: new Date(Date.now() + 900_000),
       actorUserId,
@@ -123,5 +128,59 @@ describe.skipIf(!dbReachable)("GET /orders (live Postgres)", () => {
     expect(returnedIds).toContain(orderA1.id);
     expect(returnedIds).toContain(orderA2.id);
     expect(returnedIds).not.toContain(orderB.id);
+  });
+
+  it("filters by order id, customer, and status, tenant-isolated", async () => {
+    const tenantAId = randomUUID();
+    const tenantBId = randomUUID();
+    const venueAId = randomUUID();
+    const venueBId = randomUUID();
+
+    await db.insertInto("organizations").values([
+      { id: tenantAId, name: "Zoo A" },
+      { id: tenantBId, name: "Zoo B" },
+    ]).execute();
+    await sql`select set_config('app.tenant_id', ${tenantAId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueAId, tenant_id: tenantAId, name: "Unidade A" }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantBId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B" }).execute();
+
+    const orderAna = await seedOrder(tenantAId, venueAId, "Ingresso Ana", {
+      email: "ana@example.com",
+      name: "Ana",
+    });
+    const orderBruno = await seedOrder(tenantAId, venueAId, "Ingresso Bruno", {
+      email: "bruno@example.com",
+      name: "Bruno",
+    });
+    const orderB = await seedOrder(tenantBId, venueBId, "Ingresso B", {
+      email: "ana@example.com",
+      name: "Ana",
+    });
+
+    const cookie = await seedAuthenticatedStaff(tenantAId);
+    const app = createApp();
+
+    const byId = await request(app).get(`/orders?id=${orderAna.id}`).set("Cookie", cookie);
+    expect(byId.status).toBe(200);
+    expect((byId.body.orders as Array<{ id: string }>).map((o) => o.id)).toEqual([orderAna.id]);
+
+    const byCustomer = await request(app).get("/orders?customer=bruno").set("Cookie", cookie);
+    expect(byCustomer.status).toBe(200);
+    expect((byCustomer.body.orders as Array<{ id: string }>).map((o) => o.id)).toEqual([orderBruno.id]);
+
+    const byStatus = await request(app).get("/orders?status=draft").set("Cookie", cookie);
+    expect(byStatus.status).toBe(200);
+    const byStatusIds = (byStatus.body.orders as Array<{ id: string }>).map((o) => o.id);
+    expect(byStatusIds).toContain(orderAna.id);
+    expect(byStatusIds).toContain(orderBruno.id);
+    expect(byStatusIds).not.toContain(orderB.id);
+
+    const combined = await request(app).get("/orders?customer=ana&status=draft").set("Cookie", cookie);
+    expect(combined.status).toBe(200);
+    expect((combined.body.orders as Array<{ id: string }>).map((o) => o.id)).toEqual([orderAna.id]);
+
+    const invalidStatus = await request(app).get("/orders?status=bogus").set("Cookie", cookie);
+    expect(invalidStatus.status).toBe(400);
   });
 });

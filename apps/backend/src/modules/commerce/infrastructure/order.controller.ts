@@ -10,9 +10,25 @@ import { FulfillOrderUseCase } from "../application/fulfill-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
 import { InvalidOrderTransitionError, OrderNotFoundError } from "../application/order-errors.js";
 import { InvalidReservationTransitionError, ReservationNotFoundError } from "../../capacity/application/reservation-errors.js";
-import type { Order } from "../domain/order.entity.js";
+import type { Order, OrderStatus } from "../domain/order.entity.js";
+import type { OrderListFilters } from "../domain/ports.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
+
+const ORDER_STATUSES: OrderStatus[] = [
+  "draft",
+  "awaiting_payment",
+  "paid",
+  "fulfilled",
+  "partially_refunded",
+  "refunded",
+  "cancelled",
+  "expired",
+];
+
+function isOrderStatus(value: unknown): value is OrderStatus {
+  return typeof value === "string" && (ORDER_STATUSES as string[]).includes(value);
+}
 
 function serializePayment(payment: Payment) {
   return {
@@ -42,12 +58,28 @@ function serializeOrder(order: Order, payment?: Payment | null) {
   };
 }
 
-/** spec: commerce/order - "Orders can be listed by tenant". List responses omit payment (would require N+1 lookups; see design.md). */
+/**
+ * spec: commerce/order - "Orders can be listed by tenant". List responses
+ * omit payment (would require N+1 lookups; see design.md). Supports
+ * `id`, `customer`, and `status` query params to locate a specific order
+ * (spec addendum in this change: filtering).
+ */
 export async function listOrdersController(req: Request, trx: Trx): Promise<TxResult> {
   const identity = req.identity;
   if (!identity) return { status: 401, body: { error: "authentication required" } };
 
-  const orders = await new KyselyOrderRepository(trx).findAllByTenant(identity.tenantId);
+  const { id, customer, status } = req.query as { id?: string; customer?: string; status?: string };
+  if (status !== undefined && !isOrderStatus(status)) {
+    return { status: 400, body: { error: "invalid status filter" } };
+  }
+
+  const filters: OrderListFilters = {
+    ...(id ? { orderId: id } : {}),
+    ...(customer ? { customerQuery: customer } : {}),
+    ...(status ? { status } : {}),
+  };
+
+  const orders = await new KyselyOrderRepository(trx).findAllByTenant(identity.tenantId, filters);
   return { status: 200, body: { orders: orders.map((o) => serializeOrder(o)) } };
 }
 

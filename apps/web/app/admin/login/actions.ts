@@ -23,7 +23,7 @@ export async function login(formData: FormData): Promise<LoginActionResult> {
   }
 
   await applySetCookie(response);
-  redirect("/admin/venues");
+  redirect("/admin/dashboard");
 }
 
 export async function logout(): Promise<void> {

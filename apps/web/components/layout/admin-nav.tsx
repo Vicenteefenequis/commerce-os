@@ -3,6 +3,7 @@ import { backendFetch } from "@/lib/backend-fetch";
 import { logout } from "@/app/admin/login/actions";
 
 const LINKS = [
+  { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/venues", label: "Unidades" },
   { href: "/admin/products", label: "Produtos" },
   { href: "/admin/resources", label: "Recursos" },

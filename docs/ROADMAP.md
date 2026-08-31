@@ -86,12 +86,14 @@ Change: `archive/2026-08-31-add-entitlement-ticket`
 
 Change: `archive/2026-08-31-add-access-control`
 
-### M6 — Dashboard mínimo
+### M6 — Dashboard mínimo ✅ concluído
 
-- Vendas, pedidos, visitantes (PRD §30)
-- Fecha o Definition of Done do MVP (PRD §43)
+- `GET /dashboard/summary`: GMV, ticket médio, pedidos por status e visitantes (scans autorizados), com filtro de venue e período
+- Tela `/admin/dashboard`, landing page pós-login, com seletor de período (hoje/7d/30d/personalizado) e venue
+- `GET /orders` e a tela `/admin/orders` ganharam filtro por id do pedido, cliente e status (fecha "localizar pedido", que ficava só como lista sem filtro desde o M3)
+- Fecha o Definition of Done do MVP (PRD §43), itens 13-15
 
-Status: não iniciado
+Change: `archive/2026-08-31-add-mvp-dashboard`
 
 ---
 

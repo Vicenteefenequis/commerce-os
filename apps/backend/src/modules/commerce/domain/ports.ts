@@ -18,13 +18,21 @@ export interface CreateOrderInput {
   lines: CreateOrderLineInput[];
 }
 
+export interface OrderListFilters {
+  /** Exact order id match. */
+  orderId?: string;
+  /** Matches against the order's Customer email or name (case-insensitive, partial match). */
+  customerQuery?: string;
+  status?: OrderStatus;
+}
+
 export interface OrderRepositoryPort {
   create(input: CreateOrderInput): Promise<Order>;
   findById(tenantId: string, id: string): Promise<Order | null>;
   /** Used to satisfy CHK-005: a retried checkout submission returns the same Order instead of creating a second one. */
   findByIdempotencyKey(tenantId: string, idempotencyKey: string): Promise<Order | null>;
-  /** Every Order belonging to the tenant, newest first (spec: commerce/order - "Orders can be listed by tenant"). */
-  findAllByTenant(tenantId: string): Promise<Order[]>;
+  /** Every Order belonging to the tenant, newest first, optionally narrowed by filters (spec: commerce/order - "Orders can be listed by tenant"). */
+  findAllByTenant(tenantId: string, filters?: OrderListFilters): Promise<Order[]>;
   /**
    * Guarded status transition: updates the row only if its current status
    * is one of `from`. Returns whether a row was updated - false means the
