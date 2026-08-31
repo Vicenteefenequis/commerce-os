@@ -1,4 +1,5 @@
 import type { Resource } from "./resource.entity.js";
+import type { Reservation, ReservationStatus } from "./reservation.entity.js";
 
 export interface CreateResourceInput {
   id: string;
@@ -40,4 +41,47 @@ export interface CapacityCommitmentRepositoryPort {
     amount: number;
     hardCapacity: boolean;
   }): Promise<{ id: string } | null>;
+
+  /**
+   * Releases a `held` commitment, freeing its capacity back to available
+   * (spec: capacity/resource - "Commitment release frees capacity").
+   * Guarded: only transitions rows currently `held`. Returns whether a
+   * row was updated.
+   */
+  releaseCommitment(tenantId: string, id: string): Promise<boolean>;
+
+  /**
+   * Marks a `held` commitment consumed, permanently retaining its
+   * capacity as committed (spec: capacity/resource - "Commitment
+   * consumption is permanent"). Guarded: only transitions rows currently
+   * `held`. Returns whether a row was updated.
+   */
+  markConsumed(tenantId: string, id: string): Promise<boolean>;
+}
+
+export interface CreateReservationInput {
+  id: string;
+  tenantId: string;
+  resourceId: string;
+  period: string;
+  amount: number;
+  commitmentId: string;
+  expiresAt: Date;
+}
+
+export interface ReservationRepositoryPort {
+  create(input: CreateReservationInput): Promise<Reservation>;
+  findById(tenantId: string, id: string): Promise<Reservation | null>;
+  /**
+   * Guarded status transition (design.md D2): updates the row only if its
+   * current status is one of `from`. Returns whether a row was updated -
+   * false means the reservation was not in an expected status (already
+   * transitioned, concurrently raced, or does not exist).
+   */
+  transitionStatus(
+    tenantId: string,
+    id: string,
+    from: ReservationStatus | ReservationStatus[],
+    to: ReservationStatus,
+  ): Promise<boolean>;
 }

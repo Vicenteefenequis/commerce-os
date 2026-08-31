@@ -55,4 +55,26 @@ export class KyselyCapacityCommitmentRepository implements CapacityCommitmentRep
 
     return { id };
   }
+
+  async releaseCommitment(tenantId: string, id: string): Promise<boolean> {
+    const result = await this.trx
+      .updateTable("resource_capacity_commitments")
+      .set({ status: "released" })
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .where("status", "=", "held")
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
+  }
+
+  async markConsumed(tenantId: string, id: string): Promise<boolean> {
+    const result = await this.trx
+      .updateTable("resource_capacity_commitments")
+      .set({ status: "consumed" })
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .where("status", "=", "held")
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
+  }
 }

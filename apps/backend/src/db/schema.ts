@@ -137,6 +137,21 @@ export interface LeadsTable {
   created_at: Generated<Timestamp>;
 }
 
+export type ReservationStatus = "pending" | "confirmed" | "expired" | "cancelled" | "consumed";
+
+export interface ReservationsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  resource_id: string;
+  period: ColumnType<string, string, string>;
+  amount: number;
+  status: ReservationStatus;
+  commitment_id: string;
+  expires_at: Timestamp;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   venues: VenuesTable;
@@ -152,4 +167,5 @@ export interface Database {
   resource_capacity_periods: ResourceCapacityPeriodsTable;
   resource_capacity_commitments: ResourceCapacityCommitmentsTable;
   leads: LeadsTable;
+  reservations: ReservationsTable;
 }

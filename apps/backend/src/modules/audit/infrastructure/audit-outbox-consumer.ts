@@ -8,8 +8,15 @@ import {
   type ProductUpdatedPayload,
 } from "../../catalog/domain/events.js";
 import {
+  RESERVATION_CANCELLED,
+  RESERVATION_CONFIRMED,
+  RESERVATION_CONSUMED,
+  RESERVATION_CREATED,
+  RESERVATION_EXPIRED,
   RESOURCE_CAPACITY_SET,
   RESOURCE_CREATED,
+  type ReservationCreatedPayload,
+  type ReservationTransitionPayload,
   type ResourceCapacitySetPayload,
   type ResourceCreatedPayload,
 } from "../../capacity/domain/events.js";
@@ -20,7 +27,8 @@ import { KyselyAuditRepository } from "./audit-repository.kysely.js";
 /**
  * Registers Audit as a consumer of sensitive domain events (spec:
  * foundation/audit; catalog/product - "Product mutations are audited";
- * capacity/resource - "Resource and capacity mutations are audited").
+ * capacity/resource - "Resource and capacity mutations are audited";
+ * capacity/reservation - "Reservation state transitions are audited").
  * organization.created has no identifiable actor (bootstrap endpoint) and
  * there is no permission-change event yet (no AssignRole use-case exists
  * in this change's scope). See design.md Open Questions.
@@ -105,6 +113,71 @@ export function registerAuditConsumers(): void {
       entityType: "resource",
       entityId: payload.resourceId,
       metadata: { period: payload.period, capacity: payload.capacity },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(RESERVATION_CREATED, async (event, trx) => {
+    const payload = event.payload as unknown as ReservationCreatedPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: RESERVATION_CREATED,
+      entityType: "reservation",
+      entityId: payload.reservationId,
+      metadata: { resourceId: payload.resourceId, period: payload.period, amount: payload.amount },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(RESERVATION_CONFIRMED, async (event, trx) => {
+    const payload = event.payload as unknown as ReservationTransitionPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: RESERVATION_CONFIRMED,
+      entityType: "reservation",
+      entityId: payload.reservationId,
+      metadata: { status: "confirmed" },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(RESERVATION_EXPIRED, async (event, trx) => {
+    const payload = event.payload as unknown as ReservationTransitionPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: RESERVATION_EXPIRED,
+      entityType: "reservation",
+      entityId: payload.reservationId,
+      metadata: { status: "expired" },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(RESERVATION_CANCELLED, async (event, trx) => {
+    const payload = event.payload as unknown as ReservationTransitionPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: RESERVATION_CANCELLED,
+      entityType: "reservation",
+      entityId: payload.reservationId,
+      metadata: { status: "cancelled" },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(RESERVATION_CONSUMED, async (event, trx) => {
+    const payload = event.payload as unknown as ReservationTransitionPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: RESERVATION_CONSUMED,
+      entityType: "reservation",
+      entityId: payload.reservationId,
+      metadata: { status: "consumed" },
       eventId: event.id,
     });
   });

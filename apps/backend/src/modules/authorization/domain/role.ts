@@ -21,7 +21,8 @@ export type Permission =
   | "product:manage"
   | "product:read"
   | "resource:manage"
-  | "resource:read";
+  | "resource:read"
+  | "reservation:manage";
 
 /**
  * IAM-002: fixed role -> permission mapping for the Foundation phase.
@@ -32,6 +33,12 @@ export type Permission =
  * access_operator, whose job (PRD persona "Operador de acesso") is
  * scanning tickets, not browsing catalog/capacity. manage is limited to
  * owner/admin, consistent with venue:manage.
+ *
+ * reservation:manage is limited to owner/admin for this change: the
+ * reservation routes are an internal-only surface with no production
+ * caller yet (design.md Non-Goals) - Checkout (sales/operator) and
+ * Access Control (access_operator) will need it once they call these
+ * use cases, which is out of scope here.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [
@@ -46,6 +53,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "product:read",
     "resource:manage",
     "resource:read",
+    "reservation:manage",
   ],
   admin: [
     "organization:read",
@@ -58,6 +66,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "product:read",
     "resource:manage",
     "resource:read",
+    "reservation:manage",
   ],
   finance: [
     "organization:read",

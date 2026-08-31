@@ -7,6 +7,7 @@ import { configurationRouter } from "../modules/configuration/infrastructure/con
 import { productRouter } from "../modules/catalog/infrastructure/product.routes.js";
 import { resourceRouter } from "../modules/capacity/infrastructure/resource.routes.js";
 import { leadRouter } from "../modules/marketing/infrastructure/lead.routes.js";
+import { reservationRouter } from "../modules/capacity/infrastructure/reservation.routes.js";
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   app.use(productRouter);
   app.use(resourceRouter);
   app.use(leadRouter);
+  app.use(reservationRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);
