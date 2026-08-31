@@ -31,7 +31,7 @@ export default function LoginPage() {
         title="Entrar"
         description="Use um usuário e tenant já existentes no banco para testar as telas."
         onSubmit={onSubmit}
-        onCancel={() => router.push("/")}
+        onCancel={() => router.push("/admin")}
         submitLabel="Entrar"
         isSubmitting={isSubmitting}
       >

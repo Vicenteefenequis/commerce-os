@@ -41,7 +41,7 @@ export async function createProduct(
     return { error: body.error ?? "Falha ao criar produto" };
   }
 
-  revalidatePath("/products");
+  revalidatePath("/admin/products");
   return {};
 }
 
@@ -66,6 +66,6 @@ export async function setVariantPrice(
     return { error: body.error ?? "Falha ao atualizar preço" };
   }
 
-  revalidatePath("/products");
+  revalidatePath("/admin/products");
   return {};
 }

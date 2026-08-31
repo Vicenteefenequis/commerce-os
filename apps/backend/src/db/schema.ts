@@ -129,6 +129,14 @@ export interface ResourceCapacityCommitmentsTable {
   created_at: Generated<Timestamp>;
 }
 
+export interface LeadsTable {
+  id: Generated<string>;
+  establishment_name: string;
+  email: string;
+  business_type: string;
+  created_at: Generated<Timestamp>;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   venues: VenuesTable;
@@ -143,4 +151,5 @@ export interface Database {
   resources: ResourcesTable;
   resource_capacity_periods: ResourceCapacityPeriodsTable;
   resource_capacity_commitments: ResourceCapacityCommitmentsTable;
+  leads: LeadsTable;
 }

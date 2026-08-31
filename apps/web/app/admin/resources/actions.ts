@@ -26,7 +26,7 @@ export async function createResource(
     return { error: body.error ?? "Falha ao criar recurso" };
   }
 
-  revalidatePath("/resources");
+  revalidatePath("/admin/resources");
   return {};
 }
 
@@ -74,6 +74,6 @@ export async function updateResourceCapacity(
     return { error: body.error ?? "Falha ao definir capacidade" };
   }
 
-  revalidatePath("/resources");
+  revalidatePath("/admin/resources");
   return {};
 }

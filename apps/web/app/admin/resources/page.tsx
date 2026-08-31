@@ -25,7 +25,7 @@ export default async function ResourcesPage({
   const { venueId: requestedVenueId } = await searchParams;
 
   const venuesResponse = await backendFetch("/venues");
-  if (venuesResponse.status === 401) redirect("/login");
+  if (venuesResponse.status === 401) redirect("/admin/login");
   const venuesBody = venuesResponse.ok ? await venuesResponse.json() : { venues: [] };
   const venues: Venue[] = venuesBody.venues ?? [];
 

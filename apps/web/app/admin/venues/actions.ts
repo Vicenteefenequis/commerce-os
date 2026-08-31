@@ -18,6 +18,6 @@ export async function createVenue(formData: FormData): Promise<CreateVenueAction
     return { error: body.error ?? "Falha ao criar unidade" };
   }
 
-  revalidatePath("/venues");
+  revalidatePath("/admin/venues");
   return {};
 }

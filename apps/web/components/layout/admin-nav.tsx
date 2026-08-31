@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { backendFetch } from "@/lib/backend-fetch";
-import { logout } from "@/app/login/actions";
+import { logout } from "@/app/admin/login/actions";
 
 const LINKS = [
-  { href: "/venues", label: "Unidades" },
-  { href: "/products", label: "Produtos" },
-  { href: "/resources", label: "Recursos" },
+  { href: "/admin/venues", label: "Unidades" },
+  { href: "/admin/products", label: "Produtos" },
+  { href: "/admin/resources", label: "Recursos" },
 ];
 
 /** Minimal nav for the manual test pages (spec: catalog/product, capacity/resource - visual smoke testing). */
@@ -37,7 +37,7 @@ export async function AdminNav() {
           </form>
         </div>
       ) : (
-        <Link href="/login" className="ml-auto text-sm text-fg-muted hover:text-fg">
+        <Link href="/admin/login" className="ml-auto text-sm text-fg-muted hover:text-fg">
           Entrar
         </Link>
       )}

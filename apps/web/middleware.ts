@@ -14,17 +14,17 @@ export async function middleware(request: NextRequest) {
   });
   const isAuthenticated = response.ok;
 
-  if (request.nextUrl.pathname === "/login") {
+  if (request.nextUrl.pathname === "/admin/login") {
     return isAuthenticated
-      ? NextResponse.redirect(new URL("/venues", request.url))
+      ? NextResponse.redirect(new URL("/admin/venues", request.url))
       : NextResponse.next();
   }
 
   return isAuthenticated
     ? NextResponse.next()
-    : NextResponse.redirect(new URL("/login", request.url));
+    : NextResponse.redirect(new URL("/admin/login", request.url));
 }
 
 export const config = {
-  matcher: ["/login", "/venues", "/products", "/resources"],
+  matcher: ["/admin/login", "/admin/venues", "/admin/products", "/admin/resources"],
 };

@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Commerce OS",
-  description: "Commerce OS admin",
+  description: "Commerce OS",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
