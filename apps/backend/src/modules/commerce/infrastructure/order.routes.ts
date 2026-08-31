@@ -2,7 +2,12 @@ import { Router } from "express";
 import { txRoute, txRouteWithTenant } from "../../../http/tx-route.js";
 import { requireAuth } from "../../../http/middleware/require-auth.js";
 import { requirePermission } from "../../authorization/infrastructure/require-permission.middleware.js";
-import { cancelOrderController, getOrderController, submitOrderForPaymentController } from "./order.controller.js";
+import {
+  cancelOrderController,
+  fulfillOrderController,
+  getOrderController,
+  submitOrderForPaymentController,
+} from "./order.controller.js";
 
 export const orderRouter = Router();
 
@@ -22,4 +27,11 @@ orderRouter.post(
   requireAuth,
   requirePermission("order:manage"),
   txRoute(cancelOrderController),
+);
+
+orderRouter.post(
+  "/orders/:id/fulfill",
+  requireAuth,
+  requirePermission("order:manage"),
+  txRoute(fulfillOrderController),
 );

@@ -23,9 +23,11 @@ import {
 import {
   ORDER_CANCELLED,
   ORDER_CREATED,
+  ORDER_FULFILLED,
   ORDER_STATUS_CHANGED,
   type OrderCancelledPayload,
   type OrderCreatedPayload,
+  type OrderFulfilledPayload,
   type OrderStatusChangedPayload,
 } from "../../commerce/domain/events.js";
 import { registerOutboxConsumer } from "../../../events/outbox-consumer-registry.js";
@@ -225,6 +227,19 @@ export function registerAuditConsumers(): void {
       entityType: "order",
       entityId: payload.orderId,
       metadata: { status: "cancelled" },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(ORDER_FULFILLED, async (event, trx) => {
+    const payload = event.payload as unknown as OrderFulfilledPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: ORDER_FULFILLED,
+      entityType: "order",
+      entityId: payload.orderId,
+      metadata: { status: "fulfilled" },
       eventId: event.id,
     });
   });

@@ -4,6 +4,7 @@ import { db } from "../../../db/kysely.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { KyselyOrderRepository } from "../../commerce/infrastructure/order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "../../commerce/infrastructure/system-user.kysely.js";
+import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
 import { ProcessStripeWebhookUseCase } from "../application/process-stripe-webhook.usecase.js";
 import { InvalidWebhookSignatureError } from "../application/payment-errors.js";
 import { KyselyPaymentEventRepository } from "./payment-event-repository.kysely.js";
@@ -56,6 +57,7 @@ export async function stripeWebhookRoute(req: Request, res: Response, next: Next
         new KyselyPaymentEventRepository(trx),
         new KyselyPaymentRepository(trx),
         new KyselyOrderRepository(trx),
+        new KyselyReservationRepository(trx),
         new OutboxEventPublisher(trx),
       );
       await useCase.execute({ tenantId, event, actorUserId });

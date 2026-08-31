@@ -135,6 +135,7 @@ async function deliverWebhook(tenantId: string, event: ProviderWebhookEvent) {
       new KyselyPaymentEventRepository(trx),
       new KyselyPaymentRepository(trx),
       new KyselyOrderRepository(trx),
+      new KyselyReservationRepository(trx),
       new OutboxEventPublisher(trx),
     ).execute({ tenantId, event, actorUserId });
   });
