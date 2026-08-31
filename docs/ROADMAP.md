@@ -15,37 +15,36 @@ Este arquivo é a referência viva do que falta para o MVP. Atualize os status c
 - Audit
 - Configuration
 
-## Em andamento (não bloqueia o MVP, mas está aberto)
+## Já implementado
 
-- `auth-session-awareness` — `GET /auth/me`, middleware de rota protegida, nav com sessão, logout na UI (change proposta, implementação não iniciada)
-
-## Já implementado dentro de Catalog/Capacity
-
-- Catalog/Product — criação, variantes, preço, janela de disponibilidade, visibilidade por canal, auditoria
+- `auth-session-awareness` — `GET /auth/me`, middleware de rota protegida, nav com sessão, logout na UI (archived: `2026-08-31-auth-session-awareness`)
+- Catalog/Product — criação, variantes, preço, janela de disponibilidade, visibilidade por canal, auditoria, vínculo opcional de capacidade (`resourceId`)
 - Capacity/Resource — capacidade máxima, override por período, cálculo de disponibilidade, prevenção de overbooking, auditoria
 
 ---
 
 ## Milestones até o MVP
 
-### M1 — Reservation
+### M1 — Reservation ✅ concluído
 Fecha o lifecycle de capacidade que falta em `capacity/resource`.
 
-- Lifecycle `available → held → reserved → consumed/expired` (PRD §17)
+- Lifecycle `pending → confirmed → expired/cancelled/consumed` (PRD §17)
 - Hold temporário durante checkout (CAP-006)
-- Expiração automática de holds (CAP-007)
+- Expiração de holds via `POST /reservations/:id/expire` (CAP-007) — acionada pelo caller, não há job/cron automático ainda
 - **Pré-requisito de todos os milestones seguintes.**
 
-Status: não iniciado
+Change: `archive/2026-08-31-capacity-reservation-lifecycle`
 
-### M2 — Order + Checkout
+### M2 — Order + Checkout ✅ concluído
 
 - `order`: lifecycle `draft → awaiting_payment → paid → fulfilled → partially_refunded → refunded → cancelled → expired` (ORD-001/002/003), snapshot das condições comerciais no pedido
-- Checkout público sem conta obrigatória (CHK-001), mobile-first (CHK-002)
+- Checkout público sem conta obrigatória (CHK-001), mobile-first via API (CHK-002 — sem UI de storefront ainda)
 - Servidor recalcula preço, nunca confia em valores do cliente (CHK-004)
-- Prevenção de duplicidade acidental de pedido (CHK-005)
+- Prevenção de duplicidade acidental de pedido via idempotency key (CHK-005)
+- Vínculo Variant → Resource (`resourceId` opcional e fixo) para saber o que cada item de pedido reserva
+- Sem UI de storefront/checkout público — apenas API (`POST /checkout`, `GET/cancel /orders/:id`); fica para um change futuro
 
-Status: não iniciado
+Change: `archive/2026-08-31-add-order-checkout`
 
 ### M3 — Payment
 
