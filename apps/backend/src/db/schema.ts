@@ -195,6 +195,44 @@ export interface OrderStatusHistoryTable {
   created_at: Generated<Timestamp>;
 }
 
+export type PaymentStatus = "pending" | "succeeded" | "failed" | "partially_refunded" | "refunded";
+
+export interface PaymentsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  order_id: string;
+  provider: string;
+  provider_payment_id: string;
+  method: string;
+  status: PaymentStatus;
+  amount_cents: number;
+  currency: string;
+  refunded_amount_cents: Generated<number>;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface PaymentEventsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  payment_id: string | null;
+  provider_event_id: string;
+  type: string;
+  processed_at: Generated<Timestamp>;
+}
+
+export interface PaymentStatusHistoryTable {
+  id: Generated<string>;
+  tenant_id: string;
+  payment_id: string;
+  from_status: PaymentStatus | null;
+  to_status: PaymentStatus;
+  amount_cents: number;
+  actor_user_id: string | null;
+  cause: string;
+  created_at: Generated<Timestamp>;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   venues: VenuesTable;
@@ -214,4 +252,7 @@ export interface Database {
   orders: OrdersTable;
   order_lines: OrderLinesTable;
   order_status_history: OrderStatusHistoryTable;
+  payments: PaymentsTable;
+  payment_events: PaymentEventsTable;
+  payment_status_history: PaymentStatusHistoryTable;
 }

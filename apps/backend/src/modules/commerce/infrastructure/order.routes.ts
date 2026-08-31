@@ -1,12 +1,21 @@
 import { Router } from "express";
-import { txRoute } from "../../../http/tx-route.js";
+import { txRoute, txRouteWithTenant } from "../../../http/tx-route.js";
 import { requireAuth } from "../../../http/middleware/require-auth.js";
 import { requirePermission } from "../../authorization/infrastructure/require-permission.middleware.js";
-import { cancelOrderController, getOrderController } from "./order.controller.js";
+import { cancelOrderController, getOrderController, submitOrderForPaymentController } from "./order.controller.js";
 
 export const orderRouter = Router();
 
 orderRouter.get("/orders/:id", requireAuth, requirePermission("order:manage"), txRoute(getOrderController));
+
+/** Public, no requireAuth - account-less like checkout.routes.ts (spec: commerce/checkout - "Checkout can be submitted for payment"). */
+orderRouter.post(
+  "/orders/:id/submit-for-payment",
+  txRouteWithTenant(
+    (req) => req.identity?.tenantId ?? ((req.body as { tenantId?: string })?.tenantId ?? ""),
+    submitOrderForPaymentController,
+  ),
+);
 
 orderRouter.post(
   "/orders/:id/cancel",

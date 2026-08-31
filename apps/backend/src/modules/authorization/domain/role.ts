@@ -23,7 +23,8 @@ export type Permission =
   | "resource:manage"
   | "resource:read"
   | "reservation:manage"
-  | "order:manage";
+  | "order:manage"
+  | "payment:manage";
 
 /**
  * IAM-002: fixed role -> permission mapping for the Foundation phase.
@@ -47,6 +48,11 @@ export type Permission =
  * in-process (no permission check needed - CHK-001 is account-less by
  * design), so this permission only gates the internal read/cancel
  * routes added in this change (add-order-checkout tasks.md 4.3).
+ *
+ * payment:manage gates the refund route only (add-payment design.md -
+ * refund is admin-initiated) - creating a Payment, like creating an
+ * Order, is a public/guest-callable path with no permission check.
+ * Limited to owner/admin, consistent with order:manage.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [
@@ -63,6 +69,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "resource:read",
     "reservation:manage",
     "order:manage",
+    "payment:manage",
   ],
   admin: [
     "organization:read",
@@ -77,6 +84,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "resource:read",
     "reservation:manage",
     "order:manage",
+    "payment:manage",
   ],
   finance: [
     "organization:read",

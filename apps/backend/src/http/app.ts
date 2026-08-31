@@ -10,11 +10,22 @@ import { leadRouter } from "../modules/marketing/infrastructure/lead.routes.js";
 import { reservationRouter } from "../modules/capacity/infrastructure/reservation.routes.js";
 import { checkoutRouter } from "../modules/commerce/infrastructure/checkout.routes.js";
 import { orderRouter } from "../modules/commerce/infrastructure/order.routes.js";
+import { paymentRouter } from "../modules/payments/infrastructure/payment.routes.js";
+import { paymentWebhookRouter } from "../modules/payments/infrastructure/webhook.routes.js";
 
 export function createApp() {
   const app = express();
 
-  app.use(express.json());
+  // Captures the exact request bytes alongside the parsed body, so the
+  // Stripe webhook route can verify its signature over the untouched
+  // payload (PAY-003/PAY-004) without a separate raw-body route.
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        (req as express.Request).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(resolveIdentity);
 
   app.get("/health", (_req, res) => {
@@ -31,6 +42,8 @@ export function createApp() {
   app.use(reservationRouter);
   app.use(checkoutRouter);
   app.use(orderRouter);
+  app.use(paymentRouter);
+  app.use(paymentWebhookRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);

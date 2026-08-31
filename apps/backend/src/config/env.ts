@@ -1,3 +1,24 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+/**
+ * Loads the repo-root `.env` directly into `process.env`, independent of
+ * whatever spawned this process. Discovered necessary while testing M3
+ * manually: `pnpm dev` (via Turbo, which defaults to strict env mode)
+ * silently stripped unlisted vars like `STRIPE_SECRET_KEY` from the
+ * backend's environment even when `.env` was correctly filled in and
+ * sourced in the parent shell. Loading the file here sidesteps that -
+ * and any other launcher's env-forwarding behavior - entirely. Existing
+ * `process.env` values always win (matches `.env.loadEnvFile`'s default
+ * of not overwriting already-set vars), so real deployment env vars
+ * still take precedence over a stray `.env` file. No-ops when the file
+ * doesn't exist (e.g. production, where env vars are injected directly).
+ */
+const rootEnvPath = path.resolve(import.meta.dirname, "../../../../.env");
+if (existsSync(rootEnvPath)) {
+  process.loadEnvFile(rootEnvPath);
+}
+
 function required(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
   if (value === undefined) {
@@ -16,4 +37,12 @@ export const env = {
   sessionCookieName: process.env.SESSION_COOKIE_NAME ?? "cos_session",
   sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 60 * 60 * 24 * 7),
   isProduction: (process.env.NODE_ENV ?? "development") === "production",
+  /**
+   * Optional, not `required()`: most of the app (and its tests) has
+   * nothing to do with payments, so it must keep booting without these
+   * set. `StripePaymentProvider` itself throws if it is ever
+   * instantiated without them (payments/infrastructure/stripe-payment-provider.ts).
+   */
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 };

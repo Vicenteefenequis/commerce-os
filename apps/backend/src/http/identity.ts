@@ -18,6 +18,8 @@ declare global {
   namespace Express {
     interface Request {
       identity?: Identity;
+      /** Raw request body bytes, captured by express.json()'s verify hook so a webhook route can check a provider signature computed over the exact bytes sent (PAY-003/PAY-004). */
+      rawBody?: Buffer;
     }
   }
 }
