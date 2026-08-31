@@ -34,7 +34,7 @@
 
 - [x] 5.1 Register the new outbox consumers at startup alongside `registerAuditConsumers()`; verify app boots and consumers are registered
 - [x] 5.2 Run full backend test suite and confirm no regression in existing checkout/order/fulfillment tests after the required `customer` field change
-- [ ] 5.3 Update `docs/ROADMAP.md` M4 entry to reference this change once merged (done at archive time, not here)
+- [x] 5.3 Update `docs/ROADMAP.md` M4 entry to reference this change once merged (done at archive time, not here)
 
 ## 6. Operational follow-up (outside this change's code)
 

@@ -46,26 +46,30 @@ Change: `archive/2026-08-31-capacity-reservation-lifecycle`
 
 Change: `archive/2026-08-31-add-order-checkout`
 
-### M3 — Payment
+### M3 — Payment ✅ concluído
 
 - Abstração de Payment Provider (PAY-001)
-- Pix + cartão (PAY-002)
+- Pix + cartão (PAY-002) — cartão validado ponta a ponta em modo teste da Stripe; **Pix implementado no código mas bloqueado**, não está ativado na conta Stripe usada (`payment_intent_invalid_parameter`) — precisa ser habilitado no dashboard, sem necessidade de mudança de código
 - Webhooks idempotentes (PAY-003)
 - Nunca confirmar pagamento só pelo redirect do navegador (PAY-004)
 - Suporte a reembolso (PAY-005)
 - Trilha de auditoria em mudanças financeiras (PAY-006)
+- Página pública de pagamento (`apps/web/app/pay/[orderId]`) via Stripe Payment Element
 
-**Marco PRD: "primeiro R$1 processado."**
+**Marco PRD: "primeiro R$1 processado."** — atingível para cartão; Pix depende de configuração externa na conta Stripe.
 
-Status: não iniciado
+Changes: `archive/2026-08-31-add-payment`, `archive/2026-08-31-add-order-fulfillment` (consumo de reserva no `paid`/`fulfilled`, não estava neste roadmap), `archive/2026-08-31-add-order-payment-admin` (listagem de pedidos + visão de pagamento no admin)
 
-### M4 — Entitlement + Ticket
+> Atenção operacional: não há `.env` versionado no repo (só `.env.example`). `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` precisam estar configurados no ambiente para `POST /orders/:id/payment-intent` e o webhook funcionarem.
 
-- Emissão de entitlement ao `order.paid` (TKT-001)
-- Ticket com identificador único e QR Code que referencia o direito, não é a regra de autorização (TKT-002/003/004)
-- Envio de confirmação/ticket por e-mail (COM-001/002)
+### M4 — Entitlement + Ticket ✅ concluído (parcial — envio de e-mail bloqueado por configuração externa)
 
-Status: não iniciado
+- Checkout agora captura comprador (`customer: { email, name }`), resolvido/criado como `Customer` tenant-scoped e vinculado ao `Order` (`Order.customerId`, snapshot na criação)
+- Emissão de entitlement ao `order.paid` (TKT-001) — 1 Entitlement por unidade comprada, disparado por outbox consumer em `order.status_changed`, idempotente
+- Ticket com identificador único (código, base para QR) que referencia o direito, não é a regra de autorização (TKT-002/003/004) — vínculo 1:1 Entitlement:Ticket
+- Envio de confirmação/ticket por e-mail (COM-001/002) — implementado via `EmailProviderPort` (mesmo padrão de abstração de `PaymentProviderPort`), mas **sem provedor real configurado ainda**: usa `NullEmailProvider`, que registra a tentativa como `not_configured` sem falhar. Mesma postura operacional do Pix em M3 — código pronto, falta escolher/configurar um provedor (Resend recomendado) e plugar o adapter concreto.
+
+Change: `archive/2026-08-31-add-entitlement-ticket`
 
 ### M5 — Access Control
 
