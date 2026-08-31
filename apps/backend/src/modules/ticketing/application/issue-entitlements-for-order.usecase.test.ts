@@ -30,6 +30,12 @@ class FakeEntitlementRepository implements EntitlementRepositoryPort {
   async findByOrderId(tenantId: string, orderId: string): Promise<Entitlement[]> {
     return this.created.filter((e) => e.tenantId === tenantId && e.orderId === orderId);
   }
+  async findById(tenantId: string, id: string): Promise<Entitlement | null> {
+    return this.created.find((e) => e.tenantId === tenantId && e.id === id) ?? null;
+  }
+  async consume(_tenantId: string, _id: string): Promise<boolean> {
+    throw new Error("not used by issuance");
+  }
 }
 
 class FakeTicketRepository implements TicketRepositoryPort {
@@ -41,6 +47,9 @@ class FakeTicketRepository implements TicketRepositoryPort {
   }
   async findByEntitlementIds(tenantId: string, entitlementIds: string[]): Promise<Ticket[]> {
     return this.created.filter((t) => t.tenantId === tenantId && entitlementIds.includes(t.entitlementId));
+  }
+  async findByCode(tenantId: string, code: string): Promise<Ticket | null> {
+    return this.created.find((t) => t.tenantId === tenantId && t.code === code) ?? null;
   }
 }
 

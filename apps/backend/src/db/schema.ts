@@ -243,13 +243,15 @@ export interface PaymentStatusHistoryTable {
   created_at: Generated<Timestamp>;
 }
 
+export type EntitlementStatus = "issued" | "consumed";
+
 export interface EntitlementsTable {
   id: Generated<string>;
   tenant_id: string;
   order_id: string;
   order_line_id: string;
   customer_id: string;
-  status: Generated<"issued">;
+  status: Generated<EntitlementStatus>;
   created_at: Generated<Timestamp>;
 }
 
@@ -269,6 +271,25 @@ export interface TicketDeliveriesTable {
   order_id: string;
   status: TicketDeliveryStatus;
   attempted_at: Generated<Timestamp>;
+}
+
+export type ScanOutcome = "authorized" | "already_used" | "invalid" | "wrong_venue" | "wrong_time" | "expired";
+
+export interface ScanAttemptsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  /** Null when the scanned code matched no Ticket at all (spec: access/scan - "Unknown or malformed code"). */
+  entitlement_id: string | null;
+  ticket_code: string;
+  venue_id: string;
+  outcome: ScanOutcome;
+  /**
+   * Database-defaulted, but written explicitly by the scan flow so the row
+   * carries the same instant the outcome was decided against - hence
+   * `undefined` (use the default) rather than `Generated<Timestamp>`,
+   * which would forbid supplying a value.
+   */
+  scanned_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface Database {
@@ -297,4 +318,5 @@ export interface Database {
   entitlements: EntitlementsTable;
   tickets: TicketsTable;
   ticket_deliveries: TicketDeliveriesTable;
+  scan_attempts: ScanAttemptsTable;
 }

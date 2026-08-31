@@ -30,6 +30,21 @@ export class KyselyTicketRepository implements TicketRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  /**
+   * spec: access/scan - "Access Control is isolated by tenant". The tenant
+   * filter (backed by RLS on the transaction) is what makes another
+   * Organization's code resolve to nothing, exactly like an unknown code.
+   */
+  async findByCode(tenantId: string, code: string): Promise<Ticket | null> {
+    const row = await this.trx
+      .selectFrom("tickets")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("code", "=", code)
+      .executeTakeFirst();
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: { id: string; tenant_id: string; entitlement_id: string; code: string }): Ticket {
     return Ticket.create({ id: row.id, tenantId: row.tenant_id, entitlementId: row.entitlement_id, code: row.code });
   }

@@ -1,6 +1,6 @@
 export class InvalidEntitlementError extends Error {}
 
-export type EntitlementStatus = "issued";
+export type EntitlementStatus = "issued" | "consumed";
 
 export interface EntitlementProps {
   id: string;
@@ -13,8 +13,10 @@ export interface EntitlementProps {
 
 /**
  * A single purchased right of entry, issued 1:1 per purchased unit (spec:
- * ticketing/entitlement). Consumption (M5/Access Control) will extend
- * `status` beyond `issued`.
+ * ticketing/entitlement). `consumed` is terminal and is only ever reached
+ * through the Access Control scan flow (spec: ticketing/entitlement -
+ * "Entitlement is consumed exactly once via Access Control"); there is no
+ * multi-use ticket in this MVP (add-access-control design.md - Non-Goals).
  */
 export class Entitlement {
   private constructor(private readonly props: EntitlementProps) {}
@@ -48,5 +50,23 @@ export class Entitlement {
 
   get status(): EntitlementStatus {
     return this.props.status;
+  }
+
+  get isConsumed(): boolean {
+    return this.props.status === "consumed";
+  }
+
+  /**
+   * spec: ticketing/entitlement - "Consumed Entitlement rejects further
+   * scans". Only an `issued` Entitlement can be consumed; the transition
+   * is one-way and produces a new instance rather than mutating this one,
+   * so a caller that failed to persist it never holds a value that
+   * disagrees with the row.
+   */
+  consume(): Entitlement {
+    if (this.props.status !== "issued") {
+      throw new InvalidEntitlementError(`entitlement with status ${this.props.status} cannot be consumed`);
+    }
+    return new Entitlement({ ...this.props, status: "consumed" });
   }
 }
