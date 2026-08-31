@@ -32,6 +32,9 @@ class FakePaymentRepository implements PaymentRepositoryPort {
   async findActiveByOrderId(): Promise<Payment | null> {
     throw new Error("not used in this test");
   }
+  async findMostRecentByOrderId(): Promise<Payment | null> {
+    throw new Error("not used in this test");
+  }
   async transitionStatus(
     _tenantId: string,
     _id: string,
@@ -75,6 +78,9 @@ class FakeOrderRepository implements OrderRepositoryPort {
     return this.order.tenantId === tenantId && this.order.id === id ? this.order : null;
   }
   async findByIdempotencyKey(): Promise<Order | null> {
+    throw new Error("not used in this test");
+  }
+  async findAllByTenant(): Promise<Order[]> {
     throw new Error("not used in this test");
   }
   async transitionStatus(

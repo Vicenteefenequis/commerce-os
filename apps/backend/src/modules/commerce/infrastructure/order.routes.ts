@@ -6,10 +6,13 @@ import {
   cancelOrderController,
   fulfillOrderController,
   getOrderController,
+  listOrdersController,
   submitOrderForPaymentController,
 } from "./order.controller.js";
 
 export const orderRouter = Router();
+
+orderRouter.get("/orders", requireAuth, requirePermission("order:manage"), txRoute(listOrdersController));
 
 orderRouter.get("/orders/:id", requireAuth, requirePermission("order:manage"), txRoute(getOrderController));
 

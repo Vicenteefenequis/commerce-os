@@ -3,6 +3,8 @@ import type { Trx, TxResult } from "../../../http/tx-route.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
 import { KyselyCapacityCommitmentRepository } from "../../capacity/infrastructure/capacity-commitment-repository.kysely.js";
+import { KyselyPaymentRepository } from "../../payments/infrastructure/payment-repository.kysely.js";
+import type { Payment } from "../../payments/domain/payment.entity.js";
 import { CancelOrderUseCase } from "../application/cancel-order.usecase.js";
 import { FulfillOrderUseCase } from "../application/fulfill-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
@@ -12,7 +14,17 @@ import type { Order } from "../domain/order.entity.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
 
-function serializeOrder(order: Order) {
+function serializePayment(payment: Payment) {
+  return {
+    id: payment.id,
+    status: payment.status,
+    method: payment.method,
+    amountCents: payment.amountCents,
+    refundedAmountCents: payment.refundedAmountCents,
+  };
+}
+
+function serializeOrder(order: Order, payment?: Payment | null) {
   return {
     id: order.id,
     venueId: order.venueId,
@@ -26,7 +38,17 @@ function serializeOrder(order: Order) {
       quantity: l.quantity,
       reservationId: l.reservationId,
     })),
+    ...(payment !== undefined ? { payment: payment ? serializePayment(payment) : null } : {}),
   };
+}
+
+/** spec: commerce/order - "Orders can be listed by tenant". List responses omit payment (would require N+1 lookups; see design.md). */
+export async function listOrdersController(req: Request, trx: Trx): Promise<TxResult> {
+  const identity = req.identity;
+  if (!identity) return { status: 401, body: { error: "authentication required" } };
+
+  const orders = await new KyselyOrderRepository(trx).findAllByTenant(identity.tenantId);
+  return { status: 200, body: { orders: orders.map((o) => serializeOrder(o)) } };
 }
 
 export async function getOrderController(req: Request, trx: Trx): Promise<TxResult> {
@@ -37,7 +59,9 @@ export async function getOrderController(req: Request, trx: Trx): Promise<TxResu
   const order = await new KyselyOrderRepository(trx).findById(identity.tenantId, id);
   if (!order) return { status: 404, body: { error: "order not found" } };
 
-  return { status: 200, body: serializeOrder(order) };
+  const payment = await new KyselyPaymentRepository(trx).findMostRecentByOrderId(identity.tenantId, id);
+
+  return { status: 200, body: serializeOrder(order, payment) };
 }
 
 /**

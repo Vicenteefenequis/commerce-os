@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/admin/venues", label: "Unidades" },
   { href: "/admin/products", label: "Produtos" },
   { href: "/admin/resources", label: "Recursos" },
+  { href: "/admin/orders", label: "Pedidos" },
 ];
 
 /** Minimal nav for the manual test pages (spec: catalog/product, capacity/resource - visual smoke testing). */

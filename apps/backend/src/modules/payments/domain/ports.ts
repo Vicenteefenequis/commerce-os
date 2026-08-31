@@ -16,6 +16,8 @@ export interface PaymentRepositoryPort {
   findById(tenantId: string, id: string): Promise<Payment | null>;
   /** A `pending` or `succeeded` Payment for the Order, if any (spec: "Duplicate active payment is rejected"). */
   findActiveByOrderId(tenantId: string, orderId: string): Promise<Payment | null>;
+  /** The most recent non-`failed` Payment for the Order, if any (spec: commerce/order - "Order detail exposes its active payment"). Unlike `findActiveByOrderId`, this also returns a `partially_refunded` or `refunded` Payment. */
+  findMostRecentByOrderId(tenantId: string, orderId: string): Promise<Payment | null>;
   /**
    * Guarded status transition: updates the row only if its current status
    * is one of `from`. `refundedAmountCents`, when provided, is written
