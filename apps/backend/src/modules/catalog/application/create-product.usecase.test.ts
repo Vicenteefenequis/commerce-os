@@ -22,6 +22,9 @@ class FakeVenueRepository implements VenueRepositoryPort {
   async listByTenant(tenantId: string): Promise<Venue[]> {
     return this.venues.filter((v) => v.tenantId === tenantId);
   }
+  async findById(tenantId: string, id: string): Promise<Venue | null> {
+    return this.venues.find((v) => v.tenantId === tenantId && v.id === id) ?? null;
+  }
 }
 
 class FakeProductRepository implements ProductRepositoryPort {

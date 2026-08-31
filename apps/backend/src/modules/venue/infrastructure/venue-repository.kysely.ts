@@ -22,4 +22,14 @@ export class KyselyVenueRepository implements VenueRepositoryPort {
       .execute();
     return rows.map((row) => Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name }));
   }
+
+  async findById(tenantId: string, id: string): Promise<Venue | null> {
+    const row = await this.trx
+      .selectFrom("venues")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .executeTakeFirst();
+    return row ? Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name }) : null;
+  }
 }

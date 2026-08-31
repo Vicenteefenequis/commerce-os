@@ -1,5 +1,5 @@
 import type { Trx } from "../../../http/tx-route.js";
-import { Entitlement } from "../domain/entitlement.entity.js";
+import { Entitlement, type EntitlementStatus } from "../domain/entitlement.entity.js";
 import type { CreateEntitlementInput, EntitlementRepositoryPort } from "../domain/ports.js";
 
 export class KyselyEntitlementRepository implements EntitlementRepositoryPort {
@@ -30,13 +30,42 @@ export class KyselyEntitlementRepository implements EntitlementRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findById(tenantId: string, id: string): Promise<Entitlement | null> {
+    const row = await this.trx
+      .selectFrom("entitlements")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .executeTakeFirst();
+    return row ? this.toDomain(row) : null;
+  }
+
+  /**
+   * add-access-control design.md D5: the guarded `WHERE status = 'issued'`
+   * is Postgres's own atomicity - of two concurrent scans of the same
+   * Entitlement, only one UPDATE can match the predicate, so exactly one
+   * caller sees `numUpdatedRows > 0` and reports `authorized`. Mirrors
+   * `KyselyCapacityCommitmentRepository.markConsumed`; no advisory lock is
+   * needed because the loser simply is not the first row-modifier.
+   */
+  async consume(tenantId: string, id: string): Promise<boolean> {
+    const result = await this.trx
+      .updateTable("entitlements")
+      .set({ status: "consumed" })
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .where("status", "=", "issued")
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
+  }
+
   private toDomain(row: {
     id: string;
     tenant_id: string;
     order_id: string;
     order_line_id: string;
     customer_id: string;
-    status: "issued";
+    status: EntitlementStatus;
   }): Entitlement {
     return Entitlement.create({
       id: row.id,

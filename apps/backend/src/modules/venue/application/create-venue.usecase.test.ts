@@ -26,6 +26,9 @@ class FakeVenueRepository implements VenueRepositoryPort {
   async listByTenant(tenantId: string): Promise<Venue[]> {
     return this.created.filter((v) => v.tenantId === tenantId);
   }
+  async findById(tenantId: string, id: string): Promise<Venue | null> {
+    return this.created.find((v) => v.tenantId === tenantId && v.id === id) ?? null;
+  }
 }
 
 describe("CreateVenueUseCase", () => {

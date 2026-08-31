@@ -24,7 +24,8 @@ export type Permission =
   | "resource:read"
   | "reservation:manage"
   | "order:manage"
-  | "payment:manage";
+  | "payment:manage"
+  | "entitlement:consume";
 
 /**
  * IAM-002: fixed role -> permission mapping for the Foundation phase.
@@ -53,6 +54,14 @@ export type Permission =
  * refund is admin-initiated) - creating a Payment, like creating an
  * Order, is a public/guest-callable path with no permission check.
  * Limited to owner/admin, consistent with order:manage.
+ *
+ * entitlement:consume gates the Access Control scan route, the only path
+ * that can consume an Entitlement (add-access-control design.md D7). It
+ * goes to access_operator - scanning at the door is that persona's sole
+ * purpose - plus owner/admin for support and testing, the same
+ * distribution the other manage-type permissions use. Deliberately not
+ * granted to sales/operator/finance/read_only: selling or reporting on a
+ * ticket must never be able to burn it.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [
@@ -70,6 +79,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reservation:manage",
     "order:manage",
     "payment:manage",
+    "entitlement:consume",
   ],
   admin: [
     "organization:read",
@@ -85,6 +95,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reservation:manage",
     "order:manage",
     "payment:manage",
+    "entitlement:consume",
   ],
   finance: [
     "organization:read",
@@ -96,7 +107,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   sales: ["organization:read", "venue:read", "product:read", "resource:read"],
   operator: ["organization:read", "venue:read", "product:read", "resource:read"],
-  access_operator: ["venue:read"],
+  access_operator: ["venue:read", "entitlement:consume"],
   read_only: [
     "organization:read",
     "venue:read",
