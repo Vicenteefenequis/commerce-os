@@ -62,6 +62,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       id: randomUUID(),
       tenantId,
       venueId: randomUUID(),
+      customerId: randomUUID(),
       status,
       lines: [
         OrderLine.create({
@@ -117,6 +118,7 @@ function structuredCloneOrderProps(order: Order) {
     id: order.id,
     tenantId: order.tenantId,
     venueId: order.venueId,
+    customerId: order.customerId,
     idempotencyKey: order.idempotencyKey,
     lines: order.lines,
   };

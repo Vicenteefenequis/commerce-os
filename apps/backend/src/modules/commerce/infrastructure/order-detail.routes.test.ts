@@ -12,6 +12,7 @@ import { KyselyCapacityCommitmentRepository } from "../../capacity/infrastructur
 import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
 import { CreateOrderUseCase } from "../application/create-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
 import { CreatePaymentUseCase } from "../../payments/application/create-payment.usecase.js";
@@ -82,10 +83,12 @@ async function seedTenantWithDraftOrder() {
       new KyselyCapacityCommitmentRepository(trx),
       new KyselyReservationRepository(trx),
       new KyselyOrderRepository(trx),
+      new KyselyCustomerRepository(trx),
       new OutboxEventPublisher(trx),
     ).execute({
       tenantId,
       venueId,
+      customer: { email: "ana@example.com", name: "Ana" },
       lines: [{ variantId, quantity: 1 }],
       holdExpiresAt: new Date(Date.now() + 900_000),
       actorUserId,

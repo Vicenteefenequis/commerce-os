@@ -82,6 +82,7 @@ export interface OrderProps {
   id: string;
   tenantId: string;
   venueId: string;
+  customerId: string;
   status: OrderStatus;
   idempotencyKey?: string | null;
   lines: OrderLine[];
@@ -98,6 +99,9 @@ export class Order {
     if (props.lines.length === 0) {
       throw new InvalidOrderError("at least one line is required");
     }
+    if (!props.customerId) {
+      throw new InvalidOrderError("customerId is required");
+    }
     return new Order(props);
   }
 
@@ -111,6 +115,10 @@ export class Order {
 
   get venueId(): string {
     return this.props.venueId;
+  }
+
+  get customerId(): string {
+    return this.props.customerId;
   }
 
   get status(): OrderStatus {

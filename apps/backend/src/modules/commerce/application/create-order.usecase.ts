@@ -7,6 +7,8 @@ import type {
   ReservationRepositoryPort,
   ResourceRepositoryPort,
 } from "../../capacity/domain/ports.js";
+import { ResolveCustomerUseCase } from "../../customer/application/resolve-customer.usecase.js";
+import type { CustomerRepositoryPort } from "../../customer/domain/ports.js";
 import { Order, OrderLine } from "../domain/order.entity.js";
 import { orderCreatedEvent } from "../domain/events.js";
 import type { OrderRepositoryPort } from "../domain/ports.js";
@@ -23,9 +25,15 @@ export interface CreateOrderLineRequest {
   period?: string;
 }
 
+export interface CreateOrderCustomerRequest {
+  email: string;
+  name: string;
+}
+
 export interface CreateOrderInput {
   tenantId: string;
   venueId: string;
+  customer: CreateOrderCustomerRequest;
   lines: CreateOrderLineRequest[];
   /** De-dupes a retried checkout submission (spec: commerce/checkout - "Checkout prevents accidental duplicate orders"). */
   idempotencyKey?: string | null;
@@ -60,6 +68,7 @@ export class CreateOrderUseCase {
     private readonly commitments: CapacityCommitmentRepositoryPort,
     private readonly reservations: ReservationRepositoryPort,
     private readonly orders: OrderRepositoryPort,
+    private readonly customers: CustomerRepositoryPort,
     private readonly eventPublisher: EventPublisherPort,
   ) {}
 
@@ -72,6 +81,12 @@ export class CreateOrderUseCase {
     if (input.lines.length === 0) {
       throw new EmptyCartError();
     }
+
+    const customer = await new ResolveCustomerUseCase(this.customers).execute({
+      tenantId: input.tenantId,
+      email: input.customer.email,
+      name: input.customer.name,
+    });
 
     const createReservation = new CreateReservationUseCase(
       this.resources,
@@ -121,6 +136,7 @@ export class CreateOrderUseCase {
       id: randomUUID(),
       tenantId: input.tenantId,
       venueId: input.venueId,
+      customerId: customer.id,
       status: "draft",
       idempotencyKey: input.idempotencyKey,
       lines: lineInputs.map((l) =>
@@ -141,6 +157,7 @@ export class CreateOrderUseCase {
       id: randomUUID(),
       tenantId: input.tenantId,
       venueId: input.venueId,
+      customerId: customer.id,
       idempotencyKey: input.idempotencyKey,
       lines: lineInputs,
     });

@@ -13,6 +13,7 @@ export interface CreateOrderInput {
   id: string;
   tenantId: string;
   venueId: string;
+  customerId: string;
   idempotencyKey?: string | null;
   lines: CreateOrderLineInput[];
 }

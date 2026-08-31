@@ -15,6 +15,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
         id: input.id,
         tenant_id: input.tenantId,
         venue_id: input.venueId,
+        customer_id: input.customerId,
         status: "draft",
         idempotency_key: input.idempotencyKey ?? null,
       })
@@ -157,6 +158,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
       id: string;
       tenant_id: string;
       venue_id: string;
+      customer_id: string;
       status: OrderStatus;
       idempotency_key: string | null;
     },
@@ -175,6 +177,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
       id: row.id,
       tenantId: row.tenant_id,
       venueId: row.venue_id,
+      customerId: row.customer_id,
       status: row.status,
       idempotencyKey: row.idempotency_key,
       lines: lineRows.map((l) =>

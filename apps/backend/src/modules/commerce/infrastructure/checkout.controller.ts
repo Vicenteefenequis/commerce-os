@@ -11,6 +11,8 @@ import { InvalidReservationError } from "../../capacity/domain/reservation.entit
 import { CreateOrderUseCase } from "../application/create-order.usecase.js";
 import { EmptyCartError, VariantNotFoundError } from "../application/order-errors.js";
 import { InvalidOrderError, type Order } from "../domain/order.entity.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
+import { InvalidCustomerError } from "../../customer/domain/customer.entity.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
 
@@ -35,11 +37,12 @@ function serializeOrder(order: Order) {
 }
 
 export async function checkoutController(req: Request, trx: Trx): Promise<TxResult> {
-  const { venueId, lines, idempotencyKey } = req.body as {
+  const { venueId, lines, idempotencyKey, customer } = req.body as {
     tenantId?: string;
     venueId?: string;
     lines?: Array<{ variantId?: string; quantity?: number; period?: string }>;
     idempotencyKey?: string;
+    customer?: { email?: string; name?: string };
   };
 
   const identity = req.identity;
@@ -47,6 +50,9 @@ export async function checkoutController(req: Request, trx: Trx): Promise<TxResu
 
   if (!tenantId || !venueId || !lines || lines.length === 0) {
     return { status: 400, body: { error: "tenantId, venueId, and at least one line are required" } };
+  }
+  if (!customer?.email || !customer?.name) {
+    return { status: 400, body: { error: "customer.email and customer.name are required" } };
   }
   const parsedLines = lines.map((l) => ({
     variantId: l.variantId ?? "",
@@ -65,6 +71,7 @@ export async function checkoutController(req: Request, trx: Trx): Promise<TxResu
     new KyselyCapacityCommitmentRepository(trx),
     new KyselyReservationRepository(trx),
     new KyselyOrderRepository(trx),
+    new KyselyCustomerRepository(trx),
     new OutboxEventPublisher(trx),
   );
 
@@ -72,6 +79,7 @@ export async function checkoutController(req: Request, trx: Trx): Promise<TxResu
     const order = await useCase.execute({
       tenantId,
       venueId,
+      customer: { email: customer.email, name: customer.name },
       lines: parsedLines,
       idempotencyKey: idempotencyKey ?? null,
       holdExpiresAt: new Date(Date.now() + HOLD_TTL_MS),
@@ -83,6 +91,7 @@ export async function checkoutController(req: Request, trx: Trx): Promise<TxResu
       err instanceof InvalidOrderError ||
       err instanceof InvalidResourceError ||
       err instanceof InvalidReservationError ||
+      err instanceof InvalidCustomerError ||
       err instanceof EmptyCartError
     ) {
       return { status: 400, body: { error: err.message } };

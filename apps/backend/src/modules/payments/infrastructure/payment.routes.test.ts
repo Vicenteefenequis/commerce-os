@@ -12,6 +12,7 @@ import { KyselyReservationRepository } from "../../capacity/infrastructure/reser
 import { CreateOrderUseCase } from "../../commerce/application/create-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../../commerce/application/transition-order-status.usecase.js";
 import { KyselyOrderRepository } from "../../commerce/infrastructure/order-repository.kysely.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "../../commerce/infrastructure/system-user.kysely.js";
 import { CreatePaymentUseCase } from "../application/create-payment.usecase.js";
 import type {
@@ -91,10 +92,12 @@ describe.skipIf(!dbReachable)("GET /payments/:id/status (live Postgres)", () => 
         new KyselyCapacityCommitmentRepository(trx),
         new KyselyReservationRepository(trx),
         new KyselyOrderRepository(trx),
+        new KyselyCustomerRepository(trx),
         new OutboxEventPublisher(trx),
       ).execute({
         tenantId,
         venueId,
+        customer: { email: "ana@example.com", name: "Ana" },
         lines: [{ variantId, quantity: 1 }],
         holdExpiresAt: new Date(Date.now() + 900_000),
         actorUserId,
