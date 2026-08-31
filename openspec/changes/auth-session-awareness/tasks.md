@@ -1,6 +1,6 @@
 ## 1. Backend: session introspection
 
-- [ ] 1.1 Add `meController` in `identity.controller.ts` returning `{ tenantId, userId, roles }` from `req.identity` and register `GET /auth/me` with `requireAuth` in `identity.routes.ts`; verify a request with a valid session cookie returns 200 with that body
+- [ ] 1.1 Add `meController` in `identity.controller.ts` returning `{ tenantId, userId, roles, email, organizationName }`: `req.identity` for `tenantId`/`userId`/`roles`, `KyselyUserRepository` for `email`, and the `organization` module's `OrganizationRepositoryPort` (`KyselyOrganizationRepository.findById(tenantId)`) for `organizationName`; register `GET /auth/me` with `requireAuth` in `identity.routes.ts`; verify a request with a valid session cookie returns 200 with that body
 - [ ] 1.2 Verify a request without a valid session cookie to `GET /auth/me` returns 401 (via existing `requireAuth` behavior, no new logic needed)
 
 ## 2. Frontend: route protection middleware
@@ -12,7 +12,7 @@
 
 ## 3. Frontend: nav session display and logout
 
-- [ ] 3.1 Convert `AdminNav` to an async Server Component that calls `backendFetch("/auth/me")`; verify it renders the tenantId when the call succeeds
+- [ ] 3.1 Convert `AdminNav` to an async Server Component that calls `backendFetch("/auth/me")`; verify it renders the user's `email` and `organizationName` (instead of a raw id) when the call succeeds
 - [ ] 3.2 Keep the existing "Entrar" link as the fallback when `/auth/me` returns non-200; verify by rendering a protected page's nav without a session cookie
 - [ ] 3.3 Add a `logout` Server Action (e.g. alongside `login` in `apps/web/app/login/actions.ts`) that calls `backendFetch("/auth/logout", { method: "POST" })`, applies the returned `Set-Cookie` via `applySetCookie`, and redirects to `/login`
 - [ ] 3.4 Wire the logout action into `AdminNav`'s authenticated state as a form/button; verify triggering it clears the session cookie and lands on `/login`

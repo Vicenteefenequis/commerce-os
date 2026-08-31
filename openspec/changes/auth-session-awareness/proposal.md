@@ -4,9 +4,9 @@ The `apps/web` admin screens (`login`, `venues`, `products`, `resources`) have n
 
 ## What Changes
 
-- Add `GET /auth/me` to the backend: returns the caller's `{ tenantId, userId, roles }` when the session cookie is valid, or 401 when it is not (reusing the existing `requireAuth` middleware and `req.identity`).
+- Add `GET /auth/me` to the backend: returns the caller's `{ tenantId, userId, roles, email, organizationName }` when the session cookie is valid, or 401 when it is not (reusing the existing `requireAuth` middleware and `req.identity`, enriched with the user's `email` and the tenant organization's `name` via existing repository lookups).
 - Add `apps/web/middleware.ts`: for `/venues`, `/products`, `/resources` it calls `/auth/me` and redirects to `/login` on 401; for `/login` it redirects to `/venues` on 200.
-- `AdminNav` becomes an async Server Component that calls `/auth/me` itself: shows the tenant's `tenantId` and a logout control when authenticated, the existing "Entrar" link otherwise.
+- `AdminNav` becomes an async Server Component that calls `/auth/me` itself: shows the user's `email` and their organization's `name` (instead of a raw id) plus a logout control when authenticated, the existing "Entrar" link otherwise.
 - Add a logout Server Action (mirroring the existing `login` action) that calls `POST /auth/logout`, applies the cleared session cookie, and redirects to `/login`.
 
 ## Capabilities
@@ -19,5 +19,6 @@ The `apps/web` admin screens (`login`, `venues`, `products`, `resources`) have n
 
 ## Impact
 
-- Affected code: `apps/backend/src/modules/identity/infrastructure/identity.controller.ts`, `identity.routes.ts` (new `/auth/me` handler); `apps/web/middleware.ts` (new file); `apps/web/components/layout/admin-nav.tsx`; `apps/web/app/login/page.tsx`, `apps/web/app/login/actions.ts` (new `logout` action, or a sibling module reused by `AdminNav`).
+- Affected code: `apps/backend/src/modules/identity/infrastructure/identity.controller.ts`, `identity.routes.ts` (new `/auth/me` handler, using `KyselyUserRepository` and the `organization` module's `OrganizationRepositoryPort`/`KyselyOrganizationRepository` to resolve `email` and `organizationName`); `apps/web/middleware.ts` (new file); `apps/web/components/layout/admin-nav.tsx`; `apps/web/app/login/page.tsx`, `apps/web/app/login/actions.ts` (new `logout` action, or a sibling module reused by `AdminNav`).
+- New dependency: the identity module's `/auth/me` handler now reads from the `organization` module (via its existing repository port), which it did not depend on before.
 - No changes to the login/logout/session-resolution behavior already specified in `foundation/identity`, and no changes to `admin/data-fetching`'s server-first policy — `/auth/me` calls and the logout action follow that same policy.

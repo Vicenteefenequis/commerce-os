@@ -27,11 +27,11 @@ The login screen SHALL redirect an already-authenticated request away from itsel
 - **THEN** the login form renders
 
 ### Requirement: Navigation reflects current session state
-The admin navigation SHALL display the current session's tenant identity when authenticated, and SHALL display the entry point to log in when not authenticated.
+The admin navigation SHALL display the current session's user email and organization name when authenticated, and SHALL display the entry point to log in when not authenticated.
 
-#### Scenario: Nav shows tenant identity when authenticated
+#### Scenario: Nav shows user and organization identity when authenticated
 - **WHEN** the admin navigation renders for a request with a valid session cookie
-- **THEN** it displays that session's tenant identity instead of a "log in" link
+- **THEN** it displays that session's user email and organization name instead of a "log in" link
 
 #### Scenario: Nav shows login entry point when unauthenticated
 - **WHEN** the admin navigation renders for a request without a valid session cookie
