@@ -41,6 +41,9 @@ class FakeOrderRepository implements OrderRepositoryPort {
   async findByIdempotencyKey(): Promise<Order | null> {
     throw new Error("not used in this test");
   }
+  async findAllByTenant(): Promise<Order[]> {
+    throw new Error("not used in this test");
+  }
   async transitionStatus(
     tenantId: string,
     id: string,

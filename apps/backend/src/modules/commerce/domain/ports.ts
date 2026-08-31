@@ -22,6 +22,8 @@ export interface OrderRepositoryPort {
   findById(tenantId: string, id: string): Promise<Order | null>;
   /** Used to satisfy CHK-005: a retried checkout submission returns the same Order instead of creating a second one. */
   findByIdempotencyKey(tenantId: string, idempotencyKey: string): Promise<Order | null>;
+  /** Every Order belonging to the tenant, newest first (spec: commerce/order - "Orders can be listed by tenant"). */
+  findAllByTenant(tenantId: string): Promise<Order[]>;
   /**
    * Guarded status transition: updates the row only if its current status
    * is one of `from`. Returns whether a row was updated - false means the

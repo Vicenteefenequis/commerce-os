@@ -48,6 +48,18 @@ export class KyselyPaymentRepository implements PaymentRepositoryPort {
     return row ? this.toDomain(row) : null;
   }
 
+  async findMostRecentByOrderId(tenantId: string, orderId: string): Promise<Payment | null> {
+    const row = await this.trx
+      .selectFrom("payments")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("order_id", "=", orderId)
+      .where("status", "!=", "failed")
+      .orderBy("created_at", "desc")
+      .executeTakeFirst();
+    return row ? this.toDomain(row) : null;
+  }
+
   async transitionStatus(
     tenantId: string,
     id: string,

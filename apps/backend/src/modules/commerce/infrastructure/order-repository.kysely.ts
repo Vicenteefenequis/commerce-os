@@ -81,6 +81,36 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     return this.toDomain(row, lineRows);
   }
 
+  async findAllByTenant(tenantId: string): Promise<Order[]> {
+    const rows = await this.trx
+      .selectFrom("orders")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .orderBy("created_at", "desc")
+      .execute();
+    if (rows.length === 0) return [];
+
+    const lineRows = await this.trx
+      .selectFrom("order_lines")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where(
+        "order_id",
+        "in",
+        rows.map((r) => r.id),
+      )
+      .execute();
+
+    const linesByOrderId = new Map<string, typeof lineRows>();
+    for (const l of lineRows) {
+      const list = linesByOrderId.get(l.order_id) ?? [];
+      list.push(l);
+      linesByOrderId.set(l.order_id, list);
+    }
+
+    return rows.map((row) => this.toDomain(row, linesByOrderId.get(row.id) ?? []));
+  }
+
   /**
    * design.md-equivalent guard (mirrors reservation-repository.kysely.ts):
    * a single guarded UPDATE is Postgres's own atomicity for the transition.
