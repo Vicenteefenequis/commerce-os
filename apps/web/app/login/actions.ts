@@ -25,3 +25,9 @@ export async function login(formData: FormData): Promise<LoginActionResult> {
   await applySetCookie(response);
   redirect("/venues");
 }
+
+export async function logout(): Promise<void> {
+  const response = await backendFetch("/auth/logout", { method: "POST" });
+  await applySetCookie(response);
+  redirect("/login");
+}

@@ -14,6 +14,9 @@ class FakeUserRepository implements UserRepositoryPort {
   async findByTenantAndEmail(): Promise<User | null> {
     return this.user;
   }
+  async findById(): Promise<User | null> {
+    return this.user;
+  }
 }
 
 class FakeSessionRepository implements SessionRepositoryPort {

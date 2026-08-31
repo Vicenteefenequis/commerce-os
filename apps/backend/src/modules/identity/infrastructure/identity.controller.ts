@@ -7,6 +7,7 @@ import { Argon2PasswordHasher } from "./password-hasher.argon2.js";
 import { KyselySessionRepository } from "./session-repository.kysely.js";
 import { KyselyUserRepository } from "./user-repository.kysely.js";
 import { clearedSessionCookieHeader, sessionCookieHeader, readSessionCookie } from "./cookie.js";
+import { KyselyOrganizationRepository } from "../../organization/infrastructure/organization-repository.kysely.js";
 
 const passwordHasher = new Argon2PasswordHasher();
 
@@ -41,6 +42,26 @@ export async function loginController(req: Request, trx: Trx): Promise<TxResult>
     }
     throw err;
   }
+}
+
+export async function meController(req: Request, trx: Trx): Promise<TxResult> {
+  const { tenantId, userId, roles } = req.identity!;
+
+  const [user, organization] = await Promise.all([
+    new KyselyUserRepository(trx).findById(userId),
+    new KyselyOrganizationRepository(trx).findById(tenantId),
+  ]);
+
+  return {
+    status: 200,
+    body: {
+      tenantId,
+      userId,
+      roles,
+      email: user?.email ?? null,
+      organizationName: organization?.name ?? null,
+    },
+  };
 }
 
 export async function logoutController(req: Request, trx: Trx): Promise<TxResult> {

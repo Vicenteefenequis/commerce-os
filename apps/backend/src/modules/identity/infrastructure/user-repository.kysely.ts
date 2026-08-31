@@ -22,4 +22,17 @@ export class KyselyUserRepository implements UserRepositoryPort {
       passwordHash: row.password_hash,
     });
   }
+
+  async findById(id: string): Promise<User | null> {
+    const row = await this.trx.selectFrom("users").selectAll().where("id", "=", id).executeTakeFirst();
+
+    if (!row) return null;
+
+    return User.create({
+      id: row.id,
+      tenantId: row.tenant_id,
+      email: row.email,
+      passwordHash: row.password_hash,
+    });
+  }
 }
