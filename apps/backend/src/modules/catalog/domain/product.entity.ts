@@ -6,6 +6,12 @@ export interface ProductVariantProps {
   tenantId: string;
   name: string;
   priceCents: number;
+  /**
+   * Resource whose capacity this variant consumes when purchased, fixed
+   * for the life of the variant (spec: catalog/product - "Variant
+   * capacity linkage"). Null means the variant holds no capacity.
+   */
+  resourceId?: string | null;
 }
 
 /** A purchasable line within a Product (e.g. adult ticket, child ticket). */
@@ -40,6 +46,10 @@ export class ProductVariant {
 
   get priceCents(): number {
     return this.props.priceCents;
+  }
+
+  get resourceId(): string | null {
+    return this.props.resourceId ?? null;
   }
 }
 

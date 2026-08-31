@@ -8,6 +8,8 @@ import { productRouter } from "../modules/catalog/infrastructure/product.routes.
 import { resourceRouter } from "../modules/capacity/infrastructure/resource.routes.js";
 import { leadRouter } from "../modules/marketing/infrastructure/lead.routes.js";
 import { reservationRouter } from "../modules/capacity/infrastructure/reservation.routes.js";
+import { checkoutRouter } from "../modules/commerce/infrastructure/checkout.routes.js";
+import { orderRouter } from "../modules/commerce/infrastructure/order.routes.js";
 
 export function createApp() {
   const app = express();
@@ -27,6 +29,8 @@ export function createApp() {
   app.use(resourceRouter);
   app.use(leadRouter);
   app.use(reservationRouter);
+  app.use(checkoutRouter);
+  app.use(orderRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);

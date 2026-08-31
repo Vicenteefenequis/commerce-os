@@ -1,0 +1,59 @@
+import type { Request } from "express";
+import type { Trx, TxResult } from "../../../http/tx-route.js";
+import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
+import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
+import { KyselyCapacityCommitmentRepository } from "../../capacity/infrastructure/capacity-commitment-repository.kysely.js";
+import { CancelOrderUseCase } from "../application/cancel-order.usecase.js";
+import { InvalidOrderTransitionError, OrderNotFoundError } from "../application/order-errors.js";
+import type { Order } from "../domain/order.entity.js";
+import { KyselyOrderRepository } from "./order-repository.kysely.js";
+
+function serializeOrder(order: Order) {
+  return {
+    id: order.id,
+    venueId: order.venueId,
+    status: order.status,
+    totalCents: order.totalCents,
+    lines: order.lines.map((l) => ({
+      id: l.id,
+      variantId: l.variantId,
+      name: l.name,
+      unitPriceCents: l.unitPriceCents,
+      quantity: l.quantity,
+      reservationId: l.reservationId,
+    })),
+  };
+}
+
+export async function getOrderController(req: Request, trx: Trx): Promise<TxResult> {
+  const identity = req.identity;
+  if (!identity) return { status: 401, body: { error: "authentication required" } };
+
+  const { id } = req.params as { id: string };
+  const order = await new KyselyOrderRepository(trx).findById(identity.tenantId, id);
+  if (!order) return { status: 404, body: { error: "order not found" } };
+
+  return { status: 200, body: serializeOrder(order) };
+}
+
+export async function cancelOrderController(req: Request, trx: Trx): Promise<TxResult> {
+  const identity = req.identity;
+  if (!identity) return { status: 401, body: { error: "authentication required" } };
+
+  const { id } = req.params as { id: string };
+  const useCase = new CancelOrderUseCase(
+    new KyselyOrderRepository(trx),
+    new KyselyReservationRepository(trx),
+    new KyselyCapacityCommitmentRepository(trx),
+    new OutboxEventPublisher(trx),
+  );
+
+  try {
+    await useCase.execute({ tenantId: identity.tenantId, orderId: id, actorUserId: identity.userId });
+    return { status: 204 };
+  } catch (err) {
+    if (err instanceof OrderNotFoundError) return { status: 404, body: { error: err.message } };
+    if (err instanceof InvalidOrderTransitionError) return { status: 409, body: { error: err.message } };
+    throw err;
+  }
+}

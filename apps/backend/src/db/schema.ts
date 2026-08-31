@@ -92,6 +92,7 @@ export interface ProductVariantsTable {
   product_id: string;
   name: string;
   price_cents: number;
+  resource_id: string | null;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }
@@ -152,6 +153,48 @@ export interface ReservationsTable {
   updated_at: Generated<Timestamp>;
 }
 
+export type OrderStatus =
+  | "draft"
+  | "awaiting_payment"
+  | "paid"
+  | "fulfilled"
+  | "partially_refunded"
+  | "refunded"
+  | "cancelled"
+  | "expired";
+
+export interface OrdersTable {
+  id: Generated<string>;
+  tenant_id: string;
+  venue_id: string;
+  status: OrderStatus;
+  idempotency_key: string | null;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface OrderLinesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  order_id: string;
+  variant_id: string;
+  name: string;
+  unit_price_cents: number;
+  quantity: number;
+  reservation_id: string | null;
+  created_at: Generated<Timestamp>;
+}
+
+export interface OrderStatusHistoryTable {
+  id: Generated<string>;
+  tenant_id: string;
+  order_id: string;
+  from_status: OrderStatus | null;
+  to_status: OrderStatus;
+  actor_user_id: string | null;
+  created_at: Generated<Timestamp>;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   venues: VenuesTable;
@@ -168,4 +211,7 @@ export interface Database {
   resource_capacity_commitments: ResourceCapacityCommitmentsTable;
   leads: LeadsTable;
   reservations: ReservationsTable;
+  orders: OrdersTable;
+  order_lines: OrderLinesTable;
+  order_status_history: OrderStatusHistoryTable;
 }

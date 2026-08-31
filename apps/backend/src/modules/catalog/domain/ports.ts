@@ -8,13 +8,22 @@ export interface CreateProductInput {
   availableFrom?: Date | null;
   availableUntil?: Date | null;
   channels?: string[];
-  variants: Array<{ id: string; name: string; priceCents: number }>;
+  variants: Array<{ id: string; name: string; priceCents: number; resourceId?: string | null }>;
 }
 
 export interface UpdateProductInput {
   availableFrom?: Date | null;
   availableUntil?: Date | null;
   channels?: string[];
+}
+
+export interface VariantLookup {
+  id: string;
+  productId: string;
+  venueId: string;
+  name: string;
+  priceCents: number;
+  resourceId: string | null;
 }
 
 export interface ProductRepositoryPort {
@@ -27,4 +36,6 @@ export interface ProductRepositoryPort {
     variantId: string,
     priceCents: number,
   ): Promise<{ variantId: string; previousPriceCents: number; newPriceCents: number }>;
+  /** Current price/name/resource for a single variant - used by checkout to recalculate prices server-side (spec: commerce/checkout - "Server recalculates price"). */
+  findVariantById(tenantId: string, variantId: string): Promise<VariantLookup | null>;
 }

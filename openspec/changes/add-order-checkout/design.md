@@ -35,6 +35,13 @@ CHK-005 is satisfied with a client-supplied idempotency key (e.g. a cart/session
 ### Order status transitions: append-only history table
 ORD-002 ("changes must be recorded") is implemented as an `order_status_history` row per transition (order id, from, to, actor/system cause, timestamp), mirroring the audit-log pattern already used by `capacity/reservation` rather than inventing a new mechanism.
 
+### Guest checkout audit attribution: per-tenant reserved system user
+Discovered during implementation, not anticipated when this design was first written: `audit_log.actor_user_id` is `NOT NULL` with a FK to `users`, and every audited event this change produces (`RESERVATION_CREATED` via M1's `CreateReservationUseCase`, `order.*`) needs one. CHK-001 means a guest checkout has no authenticated identity to supply. Confirmed with the user: each tenant gets one reserved "system" user (`checkout-system@internal.local`, lazily created on first use - `infrastructure/system-user.kysely.ts`), which guest-initiated actions are attributed to; it can never log in. An authenticated staff-initiated checkout uses the real identity instead.
+
+Alternatives considered and rejected:
+- Making `audit_log.actor_user_id` nullable - changes `foundation/audit`'s contract, outside this change's declared capabilities.
+- Skipping audit on the hold itself, auditing only later at a step with a real operator - reduces traceability of guest-initiated holds, and `capacity/reservation`'s "Reservation state transitions are audited" requirement has no guest exception.
+
 ## Risks / Trade-offs
 
 - **[Risk]** Reservation creation and Order creation must be atomic (both happen, or neither) → **Mitigation**: both run in the same DB transaction, following the pattern `capacity/reservation`'s use cases already use (`txRoute`).

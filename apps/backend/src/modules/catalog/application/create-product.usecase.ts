@@ -18,7 +18,7 @@ export interface CreateProductInput {
   availableFrom?: Date | null;
   availableUntil?: Date | null;
   channels?: string[];
-  variants: Array<{ name: string; priceCents: number }>;
+  variants: Array<{ name: string; priceCents: number; resourceId?: string | null }>;
   actorUserId: string;
 }
 
@@ -44,6 +44,7 @@ export class CreateProductUseCase {
         tenantId: input.tenantId,
         name: v.name,
         priceCents: v.priceCents,
+        resourceId: v.resourceId,
       }),
     );
 
@@ -68,7 +69,12 @@ export class CreateProductUseCase {
       availableFrom: input.availableFrom,
       availableUntil: input.availableUntil,
       channels: input.channels,
-      variants: draftVariants.map((v) => ({ id: v.id, name: v.name, priceCents: v.priceCents })),
+      variants: draftVariants.map((v) => ({
+        id: v.id,
+        name: v.name,
+        priceCents: v.priceCents,
+        resourceId: v.resourceId,
+      })),
     });
 
     await this.eventPublisher.publish([

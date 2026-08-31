@@ -26,6 +26,9 @@ class FakeProductRepository implements ProductRepositoryPort {
   async addVariantPriceChange(): Promise<{ variantId: string; previousPriceCents: number; newPriceCents: number }> {
     throw new Error("not used in this test");
   }
+  async findVariantById(): Promise<never> {
+    throw new Error("not used in this test");
+  }
 }
 
 function makeProduct(tenantId: string, venueId: string) {

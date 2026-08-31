@@ -20,6 +20,14 @@ import {
   type ResourceCapacitySetPayload,
   type ResourceCreatedPayload,
 } from "../../capacity/domain/events.js";
+import {
+  ORDER_CANCELLED,
+  ORDER_CREATED,
+  ORDER_STATUS_CHANGED,
+  type OrderCancelledPayload,
+  type OrderCreatedPayload,
+  type OrderStatusChangedPayload,
+} from "../../commerce/domain/events.js";
 import { registerOutboxConsumer } from "../../../events/outbox-consumer-registry.js";
 import { RecordAuditEntryUseCase } from "../application/record-audit-entry.usecase.js";
 import { KyselyAuditRepository } from "./audit-repository.kysely.js";
@@ -178,6 +186,45 @@ export function registerAuditConsumers(): void {
       entityType: "reservation",
       entityId: payload.reservationId,
       metadata: { status: "consumed" },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(ORDER_CREATED, async (event, trx) => {
+    const payload = event.payload as unknown as OrderCreatedPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: ORDER_CREATED,
+      entityType: "order",
+      entityId: payload.orderId,
+      metadata: { venueId: payload.venueId, totalCents: payload.totalCents },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(ORDER_STATUS_CHANGED, async (event, trx) => {
+    const payload = event.payload as unknown as OrderStatusChangedPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: ORDER_STATUS_CHANGED,
+      entityType: "order",
+      entityId: payload.orderId,
+      metadata: { fromStatus: payload.fromStatus, toStatus: payload.toStatus },
+      eventId: event.id,
+    });
+  });
+
+  registerOutboxConsumer(ORDER_CANCELLED, async (event, trx) => {
+    const payload = event.payload as unknown as OrderCancelledPayload;
+    await new RecordAuditEntryUseCase(new KyselyAuditRepository(trx)).execute({
+      tenantId: event.tenantId,
+      actorUserId: payload.actorUserId,
+      action: ORDER_CANCELLED,
+      entityType: "order",
+      entityId: payload.orderId,
+      metadata: { status: "cancelled" },
       eventId: event.id,
     });
   });

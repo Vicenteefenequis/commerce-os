@@ -21,7 +21,7 @@ function serializeProduct(product: {
   availableFrom: Date | null;
   availableUntil: Date | null;
   channels: string[];
-  variants: Array<{ id: string; name: string; priceCents: number }>;
+  variants: Array<{ id: string; name: string; priceCents: number; resourceId: string | null }>;
 }) {
   return {
     id: product.id,
@@ -30,7 +30,12 @@ function serializeProduct(product: {
     availableFrom: product.availableFrom,
     availableUntil: product.availableUntil,
     channels: product.channels,
-    variants: product.variants.map((v) => ({ id: v.id, name: v.name, priceCents: v.priceCents })),
+    variants: product.variants.map((v) => ({
+      id: v.id,
+      name: v.name,
+      priceCents: v.priceCents,
+      resourceId: v.resourceId,
+    })),
   };
 }
 
@@ -44,7 +49,7 @@ export async function createProductController(req: Request, trx: Trx): Promise<T
     availableFrom?: string;
     availableUntil?: string;
     channels?: string[];
-    variants?: Array<{ name: string; priceCents: number }>;
+    variants?: Array<{ name: string; priceCents: number; resourceId?: string | null }>;
   };
 
   const useCase = new CreateProductUseCase(

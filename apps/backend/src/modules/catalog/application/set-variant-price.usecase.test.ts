@@ -27,6 +27,9 @@ class FakeProductRepository implements ProductRepositoryPort {
     this.price = priceCents;
     return { variantId, previousPriceCents, newPriceCents: priceCents };
   }
+  async findVariantById(): Promise<never> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeEventPublisher implements EventPublisherPort {

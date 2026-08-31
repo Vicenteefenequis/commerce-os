@@ -36,7 +36,14 @@ class FakeProductRepository implements ProductRepositoryPort {
       availableUntil: input.availableUntil,
       channels: input.channels,
       variants: input.variants.map((v) =>
-        ProductVariant.create({ id: v.id, productId: input.id, tenantId: input.tenantId, name: v.name, priceCents: v.priceCents }),
+        ProductVariant.create({
+          id: v.id,
+          productId: input.id,
+          tenantId: input.tenantId,
+          name: v.name,
+          priceCents: v.priceCents,
+          resourceId: v.resourceId,
+        }),
       ),
     });
     this.created.push(product);
@@ -52,6 +59,9 @@ class FakeProductRepository implements ProductRepositoryPort {
     throw new Error("not used in this test");
   }
   async addVariantPriceChange(): Promise<{ variantId: string; previousPriceCents: number; newPriceCents: number }> {
+    throw new Error("not used in this test");
+  }
+  async findVariantById(): Promise<never> {
     throw new Error("not used in this test");
   }
 }
@@ -85,7 +95,28 @@ describe("CreateProductUseCase", () => {
 
     expect(products.created).toHaveLength(1);
     expect(product.variants).toHaveLength(2);
+    expect(product.variants[0]?.resourceId).toBeNull();
     expect(publisher.published[0]?.type).toBe(PRODUCT_CREATED);
+  });
+
+  it("creates a variant with a resourceId, holding capacity for that Resource", async () => {
+    const products = new FakeProductRepository();
+    const useCase = new CreateProductUseCase(
+      new FakeVenueRepository([venue]),
+      products,
+      new FakeEventPublisher(),
+    );
+    const resourceId = randomUUID();
+
+    const product = await useCase.execute({
+      tenantId,
+      venueId: venue.id,
+      name: "Ingresso com vaga",
+      variants: [{ name: "Adulto", priceCents: 5000, resourceId }],
+      actorUserId: randomUUID(),
+    });
+
+    expect(product.variants[0]?.resourceId).toBe(resourceId);
   });
 
   it("rejects product creation when the parent venue does not exist", async () => {

@@ -5,6 +5,7 @@ import type {
   CreateProductInput,
   ProductRepositoryPort,
   UpdateProductInput,
+  VariantLookup,
 } from "../domain/ports.js";
 
 export class VariantNotFoundError extends Error {
@@ -41,6 +42,7 @@ export class KyselyProductRepository implements ProductRepositoryPort {
             product_id: row.id,
             name: v.name,
             price_cents: v.priceCents,
+            resource_id: v.resourceId ?? null,
           })
           .returningAll()
           .executeTakeFirstOrThrow(),
@@ -143,9 +145,34 @@ export class KyselyProductRepository implements ProductRepositoryPort {
     };
   }
 
+  async findVariantById(tenantId: string, variantId: string): Promise<VariantLookup | null> {
+    const row = await this.trx
+      .selectFrom("product_variants")
+      .innerJoin("products", "products.id", "product_variants.product_id")
+      .select([
+        "product_variants.id as id",
+        "product_variants.product_id as productId",
+        "products.venue_id as venueId",
+        "product_variants.name as name",
+        "product_variants.price_cents as priceCents",
+        "product_variants.resource_id as resourceId",
+      ])
+      .where("product_variants.tenant_id", "=", tenantId)
+      .where("product_variants.id", "=", variantId)
+      .executeTakeFirst();
+    return row ?? null;
+  }
+
   private toDomain(
     row: { id: string; tenant_id: string; venue_id: string; name: string; available_from: unknown; available_until: unknown; channels: string[] },
-    variantRows: Array<{ id: string; product_id: string; tenant_id: string; name: string; price_cents: number }>,
+    variantRows: Array<{
+      id: string;
+      product_id: string;
+      tenant_id: string;
+      name: string;
+      price_cents: number;
+      resource_id: string | null;
+    }>,
   ): Product {
     return Product.create({
       id: row.id,
@@ -162,6 +189,7 @@ export class KyselyProductRepository implements ProductRepositoryPort {
           tenantId: v.tenant_id,
           name: v.name,
           priceCents: v.price_cents,
+          resourceId: v.resource_id,
         }),
       ),
     });

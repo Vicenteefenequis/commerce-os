@@ -22,7 +22,8 @@ export type Permission =
   | "product:read"
   | "resource:manage"
   | "resource:read"
-  | "reservation:manage";
+  | "reservation:manage"
+  | "order:manage";
 
 /**
  * IAM-002: fixed role -> permission mapping for the Foundation phase.
@@ -39,6 +40,13 @@ export type Permission =
  * caller yet (design.md Non-Goals) - Checkout (sales/operator) and
  * Access Control (access_operator) will need it once they call these
  * use cases, which is out of scope here.
+ *
+ * order:manage (GET/cancel an Order via the internal/admin surface) is
+ * likewise limited to owner/admin for the same reason: the public
+ * checkout path that actually creates Orders calls CreateOrderUseCase
+ * in-process (no permission check needed - CHK-001 is account-less by
+ * design), so this permission only gates the internal read/cancel
+ * routes added in this change (add-order-checkout tasks.md 4.3).
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [
@@ -54,6 +62,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "resource:manage",
     "resource:read",
     "reservation:manage",
+    "order:manage",
   ],
   admin: [
     "organization:read",
@@ -67,6 +76,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "resource:manage",
     "resource:read",
     "reservation:manage",
+    "order:manage",
   ],
   finance: [
     "organization:read",
