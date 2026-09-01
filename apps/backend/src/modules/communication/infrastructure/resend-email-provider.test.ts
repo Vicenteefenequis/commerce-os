@@ -4,6 +4,12 @@ const sendMock = vi.fn();
 vi.mock("resend", () => ({
   Resend: vi.fn().mockImplementation(() => ({ emails: { send: sendMock } })),
 }));
+// Isolates these tests from a developer's real RESEND_* values in their
+// local .env - constructor args passed as `undefined` must not silently
+// fall back to live ambient config (JS default-parameter semantics
+// trigger on `undefined`, same risk flagged in
+// ticketing-lifecycle.integration.test.ts).
+vi.mock("../../../config/env.js", () => ({ env: { resendApiKey: undefined, resendFromEmail: undefined } }));
 
 const { ResendEmailProvider } = await import("./resend-email-provider.js");
 

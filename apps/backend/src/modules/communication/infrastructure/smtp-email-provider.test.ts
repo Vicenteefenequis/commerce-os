@@ -4,6 +4,11 @@ const sendMailMock = vi.fn();
 vi.mock("nodemailer", () => ({
   default: { createTransport: vi.fn().mockReturnValue({ sendMail: sendMailMock }) },
 }));
+// Isolates these tests from a developer's real SMTP_*/RESEND_FROM_EMAIL
+// values in their local .env - see resend-email-provider.test.ts for why.
+vi.mock("../../../config/env.js", () => ({
+  env: { smtpHost: undefined, smtpPort: 1025, smtpUser: undefined, smtpPass: undefined, resendFromEmail: undefined },
+}));
 
 const { SmtpEmailProvider } = await import("./smtp-email-provider.js");
 

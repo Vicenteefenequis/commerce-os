@@ -97,7 +97,7 @@ Change: `archive/2026-08-31-add-mvp-dashboard`
 
 ## Lançamento real (fecha as lacunas do teste final)
 
-Todos os milestones de código (M1-M6) estão concluídos, mas o teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — ainda não passa de ponta a ponta. Quatro lacunas de código (M7-M10 abaixo) e uma pendência operacional (Pix) ficaram registradas como "parcial" nos milestones anteriores e bloqueiam o piloto real. Sem elas, o MVP está "código-completo" mas não "piloto-pronto": um cliente real não consegue configurar, vender e validar ingressos usando *apenas* a plataforma, que é a promessa central do PRD (§30).
+Todos os milestones de código (M1-M10) estão concluídos, mas o teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — ainda não passa de ponta a ponta sem intervenção operacional (Pix desativado, Resend sem domínio verificado) e tem uma lacuna de código não planejada, encontrada durante a validação do M10: o Ticket não é enviado como QR Code de verdade, só como texto (ver nota no M10 abaixo).
 
 ### M7 — Storefront: catálogo público (API) ✅ concluído
 
@@ -127,16 +127,19 @@ PRD §30 exige explicitamente "PWA/web scanner" no escopo do Access, e §9.4 (pe
 
 Change: `add-access-scanner-ui`
 
-### M10 — E-mail transacional (Resend)
+### M10 — E-mail transacional (Resend) ✅ concluído
 
-PRD §25 lista *e-mail* como integração **P0** (bloqueante de lançamento). O envio de ticket por e-mail já está implementado via `EmailProviderPort` (M4), mas sem provedor real plugado — usa `NullEmailProvider`, que só registra `not_configured`.
+PRD §25 lista *e-mail* como integração **P0** (bloqueante de lançamento). O envio de ticket por e-mail já estava implementado via `EmailProviderPort` (M4), mas sem provedor real plugado — usava `NullEmailProvider`, que só registrava `not_configured`.
 
-- `ResendEmailProvider` implementando `EmailProviderPort`, plugado no lugar do `NullEmailProvider`
-- Mantém `not_configured` como comportamento padrão quando `RESEND_API_KEY`/`RESEND_FROM_EMAIL` não estiverem setados — não quebra nenhum ambiente existente
+- `ResendEmailProvider` implementando `EmailProviderPort`, plugado no lugar do `NullEmailProvider`; testado de ponta a ponta com envio real (checkout → `paid` → outbox → e-mail entregue)
+- `SmtpEmailProvider` (nodemailer) + serviço `mailpit` no `docker-compose.yml` — permite testar o fluxo completo localmente sem gastar quota do Resend; a mesma implementação também aponta pra um sandbox Mailtrap trocando só as env vars
+- Seleção de provider por prioridade fixa: Resend > SMTP > `NullEmailProvider` (`not_configured` continua sendo o padrão quando nenhuma env var está setada — não quebra nenhum ambiente existente)
 
-Status: não iniciado
+Change: `add-transactional-email`
 
-> **Pendência operacional (não é código):** Pix implementado no código mas desativado na conta Stripe usada (`payment_intent_invalid_parameter`, M3) — precisa ser habilitado no dashboard da Stripe. Da mesma forma, o Resend (M10) precisa de conta própria e domínio verificado antes de enviar e-mails de verdade em produção.
+> **Lacuna encontrada durante a validação manual deste milestone (não fazia parte do escopo do M10):** o e-mail de confirmação envia o código do Ticket como texto puro, não como uma imagem de QR Code. TKT-002/003 (PRD §14.9) descrevem o código como a base pra um QR ("suitable for encoding as a QR payload" na spec `ticketing/ticket`), mas nenhuma parte do sistema hoje gera a imagem — nem no e-mail, nem em nenhuma tela pro comprador. Isso também significa que o scanner do M9 só funciona de fato por digitação manual do código; a opção de leitura por câmera não tem o que ler ainda. Sem uma OpenSpec change própria (`add-ticket-qrcode` ou similar) pra gerar e anexar/exibir o QR, o item 11 do Definition of Done ("escanear QR Code") não é totalmente cumprido — hoje se escaneia um código digitado, não um QR real.
+
+> **Pendência operacional (não é código):** Pix implementado no código mas desativado na conta Stripe usada (`payment_intent_invalid_parameter`, M3) — precisa ser habilitado no dashboard da Stripe. Da mesma forma, o Resend (M10) precisa de domínio verificado (o domínio de teste `onboarding@resend.dev` só entrega pro dono da conta) antes de enviar e-mails de verdade pra clientes reais em produção.
 
 ---
 

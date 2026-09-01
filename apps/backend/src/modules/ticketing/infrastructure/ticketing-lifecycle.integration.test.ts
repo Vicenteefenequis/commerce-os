@@ -1,7 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import { db } from "../../../db/kysely.js";
+import { env } from "../../../config/env.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { getOutboxConsumersFor } from "../../../events/outbox-consumer-registry.js";
 import { registerAllConsumers } from "../../../worker/register-consumers.js";
@@ -21,6 +22,27 @@ import { ensureCheckoutSystemUserId } from "../../commerce/infrastructure/system
  * order-checkout.integration.test.ts.
  */
 let dbReachable = true;
+
+/**
+ * This suite asserts on delivery outcome as a side effect of issuance,
+ * not on which EmailProviderPort is selected (that's M10's concern,
+ * covered by ticketing-outbox-consumer.test.ts). Force NullEmailProvider
+ * selection regardless of a developer's real RESEND and SMTP env values
+ * in their local .env, so this test stays deterministic instead of
+ * depending on ambient environment state.
+ */
+let originalEmailEnv: Pick<typeof env, "resendApiKey" | "resendFromEmail" | "smtpHost">;
+
+beforeEach(() => {
+  originalEmailEnv = { resendApiKey: env.resendApiKey, resendFromEmail: env.resendFromEmail, smtpHost: env.smtpHost };
+  env.resendApiKey = undefined;
+  env.resendFromEmail = undefined;
+  env.smtpHost = undefined;
+});
+
+afterEach(() => {
+  Object.assign(env, originalEmailEnv);
+});
 
 beforeAll(async () => {
   try {
