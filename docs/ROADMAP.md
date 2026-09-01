@@ -119,13 +119,13 @@ PRD §30 lista "seleção; dados do cliente; reserva temporária" como escopo ob
 
 Change: `add-storefront-checkout-ui`
 
-### M9 — Scanner de acesso (UI)
+### M9 — Scanner de acesso (UI) ✅ concluído
 
 PRD §30 exige explicitamente "PWA/web scanner" no escopo do Access, e §9.4 (persona Operador de acesso) precisa "validar QR Code rapidamente" e "operar com baixa conectividade". A validação de QR só existe via API (`POST /access/scan`, M5) — sem UI, o operador da portaria não consegue liberar entrada sem alguém tocar na API diretamente.
 
 - Tela autenticada `/admin/scan`: seleção de venue, leitura por câmera ou digitação manual do código, exibição clara dos seis outcomes (autorizado / já utilizado / inválido / local incorreto / horário incorreto / expirado), pronta pro próximo scan sem navegação
 
-Status: não iniciado
+Change: `add-access-scanner-ui`
 
 ### M10 — E-mail transacional (Resend)
 
