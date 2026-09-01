@@ -95,6 +95,47 @@ Change: `archive/2026-08-31-add-access-control`
 
 Change: `archive/2026-08-31-add-mvp-dashboard`
 
+## Lançamento real (fecha as lacunas do teste final)
+
+Todos os milestones de código (M1-M6) estão concluídos, mas o teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — ainda não passa de ponta a ponta. Quatro lacunas de código (M7-M10 abaixo) e uma pendência operacional (Pix) ficaram registradas como "parcial" nos milestones anteriores e bloqueiam o piloto real. Sem elas, o MVP está "código-completo" mas não "piloto-pronto": um cliente real não consegue configurar, vender e validar ingressos usando *apenas* a plataforma, que é a promessa central do PRD (§30).
+
+### M7 — Storefront: catálogo público (API)
+
+Nenhum endpoint de catálogo/venue/disponibilidade é público hoje — todos exigem `requireAuth` + permissão de staff (`product:read`, `venue:read`, `resource:read`). Sem uma leitura pública, um comprador real não consegue nem ver o que existe para comprar antes de chamar `POST /checkout`. **Pré-requisito de M8.**
+
+- `GET /storefront/venues/:tenantId` — venues do tenant
+- `GET /storefront/venues/:tenantId/:venueId/products` — produtos visíveis no canal `storefront` e dentro da janela de disponibilidade, com variantes e preço
+- `GET /storefront/variants/:tenantId/:variantId/availability` — disponibilidade de capacidade (reaproveita `GetAvailableCapacityUseCase`)
+
+Status: não iniciado
+
+### M8 — Storefront: checkout UI
+
+PRD §30 lista "seleção; dados do cliente; reserva temporária" como escopo obrigatório do Checkout, e §9.6 (persona Consumidor) exige "utilizar o ticket sem instalar aplicativo" — uma tela pública, mobile-first, sem conta obrigatória. Hoje o checkout só existe via API (`POST /checkout`, `GET/cancel /orders/:id`, M2). Sem essa tela, nenhum comprador real consegue completar uma compra sozinho.
+
+- Tela pública `/loja/[tenantId]/[venueId]`: navega o catálogo (M7) → carrinho → dados do comprador → `POST /checkout` → `POST /orders/:id/submit-for-payment` → redireciona para a página de pagamento já existente (`/pay/[orderId]`)
+
+Status: não iniciado (depende de M7)
+
+### M9 — Scanner de acesso (UI)
+
+PRD §30 exige explicitamente "PWA/web scanner" no escopo do Access, e §9.4 (persona Operador de acesso) precisa "validar QR Code rapidamente" e "operar com baixa conectividade". A validação de QR só existe via API (`POST /access/scan`, M5) — sem UI, o operador da portaria não consegue liberar entrada sem alguém tocar na API diretamente.
+
+- Tela autenticada `/admin/scan`: seleção de venue, leitura por câmera ou digitação manual do código, exibição clara dos seis outcomes (autorizado / já utilizado / inválido / local incorreto / horário incorreto / expirado), pronta pro próximo scan sem navegação
+
+Status: não iniciado
+
+### M10 — E-mail transacional (Resend)
+
+PRD §25 lista *e-mail* como integração **P0** (bloqueante de lançamento). O envio de ticket por e-mail já está implementado via `EmailProviderPort` (M4), mas sem provedor real plugado — usa `NullEmailProvider`, que só registra `not_configured`.
+
+- `ResendEmailProvider` implementando `EmailProviderPort`, plugado no lugar do `NullEmailProvider`
+- Mantém `not_configured` como comportamento padrão quando `RESEND_API_KEY`/`RESEND_FROM_EMAIL` não estiverem setados — não quebra nenhum ambiente existente
+
+Status: não iniciado
+
+> **Pendência operacional (não é código):** Pix implementado no código mas desativado na conta Stripe usada (`payment_intent_invalid_parameter`, M3) — precisa ser habilitado no dashboard da Stripe. Da mesma forma, o Resend (M10) precisa de conta própria e domínio verificado antes de enviar e-mails de verdade em produção.
+
 ---
 
 ## Definition of Done do MVP (PRD §43)
@@ -129,7 +170,7 @@ marketplace, veterinária, IA, loyalty points, gift cards, dynamic pricing, fisc
 
 ## Como usar este arquivo
 
-Cada milestone (M1–M6) vira uma OpenSpec change própria, seguindo a ordem recomendada do PRD (§40). Ao concluir um milestone:
+Cada milestone (M1–M10) vira uma OpenSpec change própria, seguindo a ordem recomendada do PRD (§40). Ao concluir um milestone:
 
 1. Marque o status acima como `✅ concluído`.
 2. Adicione a referência ao change/commit correspondente.
