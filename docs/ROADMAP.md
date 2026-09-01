@@ -99,7 +99,7 @@ Change: `archive/2026-08-31-add-mvp-dashboard`
 
 Todos os milestones de código (M1-M6) estão concluídos, mas o teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — ainda não passa de ponta a ponta. Quatro lacunas de código (M7-M10 abaixo) e uma pendência operacional (Pix) ficaram registradas como "parcial" nos milestones anteriores e bloqueiam o piloto real. Sem elas, o MVP está "código-completo" mas não "piloto-pronto": um cliente real não consegue configurar, vender e validar ingressos usando *apenas* a plataforma, que é a promessa central do PRD (§30).
 
-### M7 — Storefront: catálogo público (API)
+### M7 — Storefront: catálogo público (API) ✅ concluído
 
 Nenhum endpoint de catálogo/venue/disponibilidade é público hoje — todos exigem `requireAuth` + permissão de staff (`product:read`, `venue:read`, `resource:read`). Sem uma leitura pública, um comprador real não consegue nem ver o que existe para comprar antes de chamar `POST /checkout`. **Pré-requisito de M8.**
 
@@ -107,7 +107,7 @@ Nenhum endpoint de catálogo/venue/disponibilidade é público hoje — todos ex
 - `GET /storefront/venues/:tenantId/:venueId/products` — produtos visíveis no canal `storefront` e dentro da janela de disponibilidade, com variantes e preço
 - `GET /storefront/variants/:tenantId/:variantId/availability` — disponibilidade de capacidade (reaproveita `GetAvailableCapacityUseCase`)
 
-Status: não iniciado
+Change: `add-storefront-catalog`
 
 ### M8 — Storefront: checkout UI
 

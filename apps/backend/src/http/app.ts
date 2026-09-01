@@ -14,6 +14,7 @@ import { paymentRouter } from "../modules/payments/infrastructure/payment.routes
 import { paymentWebhookRouter } from "../modules/payments/infrastructure/webhook.routes.js";
 import { accessScanRouter } from "../modules/access/infrastructure/scan.routes.js";
 import { dashboardRouter } from "../modules/admin/infrastructure/dashboard.routes.js";
+import { storefrontRouter } from "../modules/storefront/infrastructure/storefront.routes.js";
 
 export function createApp() {
   const app = express();
@@ -48,6 +49,7 @@ export function createApp() {
   app.use(paymentWebhookRouter);
   app.use(accessScanRouter);
   app.use(dashboardRouter);
+  app.use(storefrontRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);
