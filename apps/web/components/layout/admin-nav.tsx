@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/products", label: "Produtos" },
   { href: "/admin/resources", label: "Recursos" },
   { href: "/admin/orders", label: "Pedidos" },
+  { href: "/admin/scan", label: "Scanner" },
 ];
 
 /** Minimal nav for the manual test pages (spec: catalog/product, capacity/resource - visual smoke testing). */
