@@ -109,13 +109,15 @@ Nenhum endpoint de catálogo/venue/disponibilidade é público hoje — todos ex
 
 Change: `add-storefront-catalog`
 
-### M8 — Storefront: checkout UI
+### M8 — Storefront: checkout UI ✅ concluído
 
 PRD §30 lista "seleção; dados do cliente; reserva temporária" como escopo obrigatório do Checkout, e §9.6 (persona Consumidor) exige "utilizar o ticket sem instalar aplicativo" — uma tela pública, mobile-first, sem conta obrigatória. Hoje o checkout só existe via API (`POST /checkout`, `GET/cancel /orders/:id`, M2). Sem essa tela, nenhum comprador real consegue completar uma compra sozinho.
 
-- Tela pública `/loja/[tenantId]/[venueId]`: navega o catálogo (M7) → carrinho → dados do comprador → `POST /checkout` → `POST /orders/:id/submit-for-payment` → redireciona para a página de pagamento já existente (`/pay/[orderId]`)
+- Tela pública `/loja/[tenantId]/[venueId]`: navega o catálogo (M7) → carrinho (produto, quantidade, data de visita quando a variante é vinculada a capacidade) → dados do comprador → `POST /checkout` → `POST /orders/:id/submit-for-payment` → redireciona para a página de pagamento já existente (`/pay/[orderId]`)
+- Falhas de checkout (capacidade insuficiente, dados inválidos) são exibidas sem descartar o carrinho nem os dados já preenchidos
+- Catálogo vazio ou loja/venue inexistente mostram uma mensagem clara em vez de tela em branco
 
-Status: não iniciado (depende de M7)
+Change: `add-storefront-checkout-ui`
 
 ### M9 — Scanner de acesso (UI)
 
