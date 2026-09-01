@@ -45,4 +45,21 @@ export const env = {
    */
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  /**
+   * Transactional email (M10). Optional, same reasoning as the Stripe
+   * vars above: most of the app boots fine without them, and
+   * `ResendEmailProvider`/`SmtpEmailProvider` throw if instantiated
+   * without their own required config.
+   */
+  resendApiKey: process.env.RESEND_API_KEY,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL,
+  /**
+   * SMTP is dev-only (local Mailpit or a Mailtrap sandbox) - never
+   * intended for staging/prod, where Resend always takes priority when
+   * both are configured (design.md - provider selection priority).
+   */
+  smtpHost: process.env.SMTP_HOST,
+  smtpPort: Number(process.env.SMTP_PORT ?? 1025),
+  smtpUser: process.env.SMTP_USER,
+  smtpPass: process.env.SMTP_PASS,
 };
