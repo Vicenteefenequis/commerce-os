@@ -42,4 +42,6 @@ export interface TicketRepositoryPort {
    * unknown one.
    */
   findByCode(tenantId: string, code: string): Promise<Ticket | null>;
+  /** spec: ticketing/ticket - "Ticket code can be rendered as a QR image". */
+  findById(tenantId: string, id: string): Promise<Ticket | null>;
 }

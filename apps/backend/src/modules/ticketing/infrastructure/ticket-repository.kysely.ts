@@ -45,6 +45,16 @@ export class KyselyTicketRepository implements TicketRepositoryPort {
     return row ? this.toDomain(row) : null;
   }
 
+  async findById(tenantId: string, id: string): Promise<Ticket | null> {
+    const row = await this.trx
+      .selectFrom("tickets")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", id)
+      .executeTakeFirst();
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: { id: string; tenant_id: string; entitlement_id: string; code: string }): Ticket {
     return Ticket.create({ id: row.id, tenantId: row.tenant_id, entitlementId: row.entitlement_id, code: row.code });
   }

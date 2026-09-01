@@ -36,6 +36,7 @@ export class SmtpEmailProvider implements EmailProviderPort {
         to: input.to,
         subject: input.subject,
         text: input.body,
+        ...(input.html ? { html: input.html } : {}),
       });
       return { status: "sent" };
     } catch (err) {

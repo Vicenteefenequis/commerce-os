@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { createPaymentIntent } from "./actions";
+import { TicketViewer, type TicketSummary } from "./ticket-viewer";
 
 type PaymentMethod = "card" | "pix";
 type Phase = "select_method" | "collecting" | "confirming" | "checking" | "succeeded" | "failed" | "error";
@@ -47,6 +48,21 @@ async function pollPaymentStatus(paymentId: string, tenantId: string): Promise<s
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
   return "pending";
+}
+
+/**
+ * spec: storefront/ticket-view - "Ticket view is shown only after
+ * payment succeeds". Called only once the client-side poll above
+ * resolves to `succeeded`; a failed fetch simply leaves the viewer
+ * empty rather than surfacing a second error state.
+ */
+async function fetchOrderTickets(orderId: string, tenantId: string): Promise<TicketSummary[]> {
+  const res = await fetch(`/api/orders/${orderId}/tickets?tenantId=${encodeURIComponent(tenantId)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  const body: { tickets?: TicketSummary[] } = await res.json();
+  return body.tickets ?? [];
 }
 
 function CheckoutForm({
@@ -94,6 +110,7 @@ export function PayForm({ orderId, tenantId }: { orderId: string; tenantId: stri
   const [clientSecret, setClientSecret] = useState<string>();
   const [paymentId, setPaymentId] = useState<string>();
   const [message, setMessage] = useState<string>();
+  const [tickets, setTickets] = useState<TicketSummary[]>();
 
   async function startPayment() {
     setPhase("confirming");
@@ -111,12 +128,28 @@ export function PayForm({ orderId, tenantId }: { orderId: string; tenantId: stri
   function handleDone(nextPhase: Phase, doneMessage?: string) {
     setPhase(nextPhase);
     setMessage(doneMessage);
+    if (nextPhase === "succeeded") {
+      fetchOrderTickets(orderId, tenantId).then(setTickets);
+    }
   }
 
-  if (phase === "succeeded" || phase === "failed") {
+  if (phase === "succeeded") {
     return (
       <Card>
-        <CardHeader title={STATUS_LABEL[phase] ?? phase} description={message} />
+        <CardHeader title={STATUS_LABEL.succeeded} />
+        {tickets === undefined ? (
+          <p className="text-sm text-fg-muted">Carregando ingressos...</p>
+        ) : (
+          <TicketViewer tickets={tickets} tenantId={tenantId} />
+        )}
+      </Card>
+    );
+  }
+
+  if (phase === "failed") {
+    return (
+      <Card>
+        <CardHeader title={STATUS_LABEL.failed} description={message} />
       </Card>
     );
   }

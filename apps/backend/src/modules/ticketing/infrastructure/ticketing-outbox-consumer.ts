@@ -6,6 +6,7 @@ import { NullEmailProvider } from "../../communication/infrastructure/null-email
 import { ResendEmailProvider } from "../../communication/infrastructure/resend-email-provider.js";
 import { SmtpEmailProvider } from "../../communication/infrastructure/smtp-email-provider.js";
 import { KyselyTicketDeliveryRepository } from "../../communication/infrastructure/ticket-delivery-repository.kysely.js";
+import { QrCodeTicketRenderer } from "../../communication/infrastructure/qrcode-ticket-renderer.js";
 import { DeliverOrderTicketsUseCase } from "../../communication/application/deliver-order-tickets.usecase.js";
 import type { EmailProviderPort } from "../../communication/domain/ports.js";
 import { registerOutboxConsumer } from "../../../events/outbox-consumer-registry.js";
@@ -57,6 +58,7 @@ export function registerTicketingConsumers(): void {
     const deliver = new DeliverOrderTicketsUseCase(
       selectEmailProvider(),
       new KyselyTicketDeliveryRepository(trx),
+      new QrCodeTicketRenderer(),
     );
     await deliver.execute({
       tenantId: event.tenantId,

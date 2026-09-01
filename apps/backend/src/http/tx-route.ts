@@ -24,6 +24,10 @@ function sendTxResult(res: Response, result: TxResult): void {
     res.status(204).end();
     return;
   }
+  if (Buffer.isBuffer(result.body)) {
+    res.status(result.status).send(result.body);
+    return;
+  }
   res.status(result.status).json(result.body ?? {});
 }
 

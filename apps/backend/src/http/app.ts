@@ -13,6 +13,7 @@ import { orderRouter } from "../modules/commerce/infrastructure/order.routes.js"
 import { paymentRouter } from "../modules/payments/infrastructure/payment.routes.js";
 import { paymentWebhookRouter } from "../modules/payments/infrastructure/webhook.routes.js";
 import { accessScanRouter } from "../modules/access/infrastructure/scan.routes.js";
+import { ticketRouter } from "../modules/ticketing/infrastructure/ticket.routes.js";
 import { dashboardRouter } from "../modules/admin/infrastructure/dashboard.routes.js";
 import { storefrontRouter } from "../modules/storefront/infrastructure/storefront.routes.js";
 
@@ -48,6 +49,7 @@ export function createApp() {
   app.use(paymentRouter);
   app.use(paymentWebhookRouter);
   app.use(accessScanRouter);
+  app.use(ticketRouter);
   app.use(dashboardRouter);
   app.use(storefrontRouter);
 

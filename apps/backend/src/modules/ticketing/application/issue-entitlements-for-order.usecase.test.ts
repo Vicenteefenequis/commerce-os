@@ -51,6 +51,9 @@ class FakeTicketRepository implements TicketRepositoryPort {
   async findByCode(tenantId: string, code: string): Promise<Ticket | null> {
     return this.created.find((t) => t.tenantId === tenantId && t.code === code) ?? null;
   }
+  async findById(tenantId: string, id: string): Promise<Ticket | null> {
+    return this.created.find((t) => t.tenantId === tenantId && t.id === id) ?? null;
+  }
 }
 
 describe("IssueEntitlementsForOrderUseCase", () => {
