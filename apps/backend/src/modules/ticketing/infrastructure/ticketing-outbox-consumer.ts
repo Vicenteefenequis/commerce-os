@@ -1,13 +1,29 @@
 import { ORDER_STATUS_CHANGED, type OrderStatusChangedPayload } from "../../commerce/domain/events.js";
 import { KyselyOrderRepository } from "../../commerce/infrastructure/order-repository.kysely.js";
 import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
+import { env } from "../../../config/env.js";
 import { NullEmailProvider } from "../../communication/infrastructure/null-email-provider.js";
+import { ResendEmailProvider } from "../../communication/infrastructure/resend-email-provider.js";
+import { SmtpEmailProvider } from "../../communication/infrastructure/smtp-email-provider.js";
 import { KyselyTicketDeliveryRepository } from "../../communication/infrastructure/ticket-delivery-repository.kysely.js";
 import { DeliverOrderTicketsUseCase } from "../../communication/application/deliver-order-tickets.usecase.js";
+import type { EmailProviderPort } from "../../communication/domain/ports.js";
 import { registerOutboxConsumer } from "../../../events/outbox-consumer-registry.js";
 import { IssueEntitlementsForOrderUseCase } from "../application/issue-entitlements-for-order.usecase.js";
 import { KyselyEntitlementRepository } from "./entitlement-repository.kysely.js";
 import { KyselyTicketRepository } from "./ticket-repository.kysely.js";
+
+/**
+ * spec: communication/ticket-delivery - "A production-capable provider
+ * takes priority over a development-only one". Resend always wins when
+ * configured; SMTP (Mailpit/Mailtrap) is dev-only and never intended for
+ * staging/prod (design.md - provider selection priority).
+ */
+export function selectEmailProvider(): EmailProviderPort {
+  if (env.resendApiKey && env.resendFromEmail) return new ResendEmailProvider();
+  if (env.smtpHost) return new SmtpEmailProvider();
+  return new NullEmailProvider();
+}
 
 /**
  * Registers Ticketing as a consumer of `order.status_changed` (spec:
@@ -39,7 +55,7 @@ export function registerTicketingConsumers(): void {
     if (!customer) return;
 
     const deliver = new DeliverOrderTicketsUseCase(
-      new NullEmailProvider(),
+      selectEmailProvider(),
       new KyselyTicketDeliveryRepository(trx),
     );
     await deliver.execute({
