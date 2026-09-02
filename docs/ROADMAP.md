@@ -97,7 +97,7 @@ Change: `archive/2026-08-31-add-mvp-dashboard`
 
 ## Lançamento real (fecha as lacunas do teste final)
 
-Todos os milestones de código (M1-M10) estão concluídos, mas o teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — ainda não passa de ponta a ponta sem intervenção operacional (Pix desativado, Resend sem domínio verificado) e tem uma lacuna de código não planejada, encontrada durante a validação do M10: o Ticket não é enviado como QR Code de verdade, só como texto (ver nota no M10 abaixo).
+Todos os milestones de código (M1-M11) estão concluídos, incluindo a lacuna do QR Code real (M11). O teste final do PRD §43 — **"uma pessoa real pagou, recebeu seu ingresso e entrou no estabelecimento sem alguém da equipe de desenvolvimento tocar no banco de dados"** — só não passa de ponta a ponta por pendências puramente operacionais, não de código: Pix desativado na conta Stripe e Resend sem domínio verificado.
 
 ### M7 — Storefront: catálogo público (API) ✅ concluído
 
@@ -137,9 +137,26 @@ PRD §25 lista *e-mail* como integração **P0** (bloqueante de lançamento). O 
 
 Change: `add-transactional-email`
 
-> **Lacuna encontrada durante a validação manual deste milestone (não fazia parte do escopo do M10):** o e-mail de confirmação envia o código do Ticket como texto puro, não como uma imagem de QR Code. TKT-002/003 (PRD §14.9) descrevem o código como a base pra um QR ("suitable for encoding as a QR payload" na spec `ticketing/ticket`), mas nenhuma parte do sistema hoje gera a imagem — nem no e-mail, nem em nenhuma tela pro comprador. Isso também significa que o scanner do M9 só funciona de fato por digitação manual do código; a opção de leitura por câmera não tem o que ler ainda. Sem uma OpenSpec change própria (`add-ticket-qrcode` ou similar) pra gerar e anexar/exibir o QR, o item 11 do Definition of Done ("escanear QR Code") não é totalmente cumprido — hoje se escaneia um código digitado, não um QR real.
+### M11 — QR Code real do Ticket ✅ concluído
+
+Lacuna encontrada durante a validação manual do M10 (não fazia parte do escopo original): o e-mail de confirmação enviava o código do Ticket como texto puro, e nenhuma tela do comprador renderizava a imagem de QR. Isso fechava o item 11 do Definition of Done ("escanear QR Code") apenas por digitação manual, nunca por câmera de verdade.
+
+- Geração server-side da imagem de QR a partir do código do Ticket (dependência `qrcode` no backend)
+- Leitura account-less das Tickets de um Order pago (mesmo padrão tenantId+resourceId-in-request de `checkout`/`payments`/`storefront`, sem novo esquema de token assinado)
+- `/pay/[orderId]` passa a exibir, após pagamento `succeeded`, cada Ticket do Order (QR + código) com navegação entre múltiplos tickets
+- E-mail de `communication/ticket-delivery` embute a imagem de QR de cada Ticket via `cid` (inline attachment), não `data:` URI — vários clientes de e-mail bloqueiam `data:` em `<img src>`
+
+Change: `archive/2026-09-02-add-ticket-qrcode-view`, fix de embed via `cid` em `97736f2`
 
 > **Pendência operacional (não é código):** Pix implementado no código mas desativado na conta Stripe usada (`payment_intent_invalid_parameter`, M3) — precisa ser habilitado no dashboard da Stripe. Da mesma forma, o Resend (M10) precisa de domínio verificado (o domínio de teste `onboarding@resend.dev` só entrega pro dono da conta) antes de enviar e-mails de verdade pra clientes reais em produção.
+
+### M12 — Storefront: entrada por tenant e experiência data-primeiro 🚧 em andamento
+
+Lacuna encontrada ao pensar na experiência real do comprador (não fazia parte do escopo original de nenhum milestone): a plataforma é multitenant por isolamento de dados, mas cada negócio (tenant) divulga seu **próprio link** de loja — não existe (nem está previsto, PRD §R7 "marketplace prematuro") um diretório público cruzando negócios diferentes num só app. Hoje, porém, esse link nem tem onde aterrissar (`/loja/[tenantId]` não existe), a data da visita só é perguntada depois de já ter escolhido quantidade por item, e a capacidade disponível só é descoberta se o checkout falhar — nunca é mostrada antes. `GET /storefront/venues/:tenantId` e `GET /storefront/variants/:tenantId/:variantId/availability` (M7) já existem e cobrem o necessário; o que falta é só front-end e reordenar a UX. Planejado em 3 fases independentes:
+
+- **M12.1 — Entrada do tenant** 🚧 em andamento: página `/loja/[tenantId]` lista os venues do negócio (reaproveita `GET /storefront/venues/:tenantId`); pula direto pro venue quando só há um; mostra estado de "não encontrado" quando o tenant não existe ou não tem venues. Change: `add-storefront-tenant-entry`.
+- **M12.2 — Seleção data-primeiro** ⏳ planejado: move a escolha da data de visita para **antes** da lista de ingressos, como uma data única do carrinho (hoje é um campo de data por linha, escolhido só depois de definir quantidade).
+- **M12.3 — Capacidade visível por data** ⏳ planejado: para cada ingresso vinculado a capacidade, consulta `GET /storefront/variants/:tenantId/:variantId/availability?period=<data escolhida>` e mostra vagas restantes, desabilitando/avisando quando esgotado — em vez de só descobrir a falta de vaga no checkout.
 
 ---
 
