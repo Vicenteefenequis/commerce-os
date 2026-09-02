@@ -37,6 +37,16 @@ export class SmtpEmailProvider implements EmailProviderPort {
         subject: input.subject,
         text: input.body,
         ...(input.html ? { html: input.html } : {}),
+        ...(input.attachments?.length
+          ? {
+              attachments: input.attachments.map((attachment) => ({
+                filename: attachment.filename,
+                content: attachment.content,
+                cid: attachment.contentId,
+                contentType: attachment.contentType,
+              })),
+            }
+          : {}),
       });
       return { status: "sent" };
     } catch (err) {

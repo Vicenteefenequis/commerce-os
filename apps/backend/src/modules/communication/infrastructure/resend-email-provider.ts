@@ -27,6 +27,16 @@ export class ResendEmailProvider implements EmailProviderPort {
         subject: input.subject,
         text: input.body,
         ...(input.html ? { html: input.html } : {}),
+        ...(input.attachments?.length
+          ? {
+              attachments: input.attachments.map((attachment) => ({
+                filename: attachment.filename,
+                content: attachment.content,
+                contentId: attachment.contentId,
+                contentType: attachment.contentType,
+              })),
+            }
+          : {}),
       });
       if (error) return { status: "failed", reason: error.message };
       return { status: "sent" };

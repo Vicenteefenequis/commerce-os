@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  EmailAttachment,
   EmailProviderPort,
   QrCodeRendererPort,
   TicketDeliveryRepositoryPort,
@@ -25,23 +26,32 @@ function buildEmailBody(customerName: string, ticketCodes: string[]): string {
  * to render degrades to that code as text only, so a single bad render
  * never blocks the others or the delivery attempt itself (spec: "QR
  * generation failure does not block delivery of the code").
+ *
+ * QR images are embedded as `cid:`-referenced inline attachments, not
+ * `data:` URIs: Gmail and most webmail clients strip `data:` image
+ * sources from received HTML as a phishing/tracking mitigation, so the
+ * image renders as blank space there even though it displays fine in a
+ * raw-HTML viewer like Mailpit.
  */
-async function buildEmailHtml(
+async function buildEmail(
   qrRenderer: QrCodeRendererPort,
   customerName: string,
   ticketCodes: string[],
-): Promise<string> {
+): Promise<{ html: string; attachments: EmailAttachment[] }> {
+  const attachments: EmailAttachment[] = [];
   const items = await Promise.all(
-    ticketCodes.map(async (code) => {
+    ticketCodes.map(async (code, index) => {
       try {
         const png = await qrRenderer.render(code);
-        return `<p><img src="data:image/png;base64,${png.toString("base64")}" alt="QR do ingresso ${code}" width="200" height="200" /><br />${code}</p>`;
+        const contentId = `ticket-qr-${index}`;
+        attachments.push({ filename: `ticket-${code}.png`, content: png, contentId, contentType: "image/png" });
+        return `<p><img src="cid:${contentId}" alt="QR do ingresso ${code}" width="200" height="200" /><br />${code}</p>`;
       } catch {
         return `<p>${code}</p>`;
       }
     }),
   );
-  return `<p>Olá ${customerName},</p><p>Seus ingressos:</p>${items.join("")}`;
+  return { html: `<p>Olá ${customerName},</p><p>Seus ingressos:</p>${items.join("")}`, attachments };
 }
 
 /**
@@ -60,11 +70,13 @@ export class DeliverOrderTicketsUseCase {
   async execute(input: DeliverOrderTicketsInput): Promise<TicketDeliveryStatus> {
     let status: TicketDeliveryStatus;
     try {
+      const { html, attachments } = await buildEmail(this.qrRenderer, input.customerName, input.ticketCodes);
       const result = await this.emailProvider.send({
         to: input.customerEmail,
         subject: "Seus ingressos",
         body: buildEmailBody(input.customerName, input.ticketCodes),
-        html: await buildEmailHtml(this.qrRenderer, input.customerName, input.ticketCodes),
+        html,
+        attachments,
       });
       status = result.status;
     } catch {

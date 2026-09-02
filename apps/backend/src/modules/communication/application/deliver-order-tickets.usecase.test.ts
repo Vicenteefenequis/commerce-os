@@ -82,17 +82,23 @@ describe("DeliverOrderTicketsUseCase", () => {
     expect(deliveries.records[0]?.status).toBe("failed");
   });
 
-  it("includes one QR image per ticket code in the email html (spec: Ticket email includes each Ticket's QR image)", async () => {
+  it("includes one QR image per ticket code in the email html, embedded as a cid: inline attachment (spec: Ticket email includes each Ticket's QR image)", async () => {
     const provider = new FakeEmailProvider({ status: "sent" });
     const deliveries = new FakeTicketDeliveryRepository();
     const useCase = new DeliverOrderTicketsUseCase(provider, deliveries, new FakeQrCodeRenderer());
 
     await useCase.execute(baseInput);
 
-    const html = provider.sent[0]?.html ?? "";
+    const sent = provider.sent[0];
+    const html = sent?.html ?? "";
     expect(html.match(/<img/g)).toHaveLength(2);
+    expect(html).not.toContain("data:image");
+    expect(sent?.attachments).toHaveLength(2);
+    for (const attachment of sent?.attachments ?? []) {
+      expect(html).toContain(`src="cid:${attachment.contentId}"`);
+    }
     for (const code of baseInput.ticketCodes) {
-      expect(html).toContain(Buffer.from(`qr:${code}`).toString("base64"));
+      expect(sent?.attachments?.some((a) => a.content.equals(Buffer.from(`qr:${code}`)))).toBe(true);
     }
   });
 
@@ -106,9 +112,11 @@ describe("DeliverOrderTicketsUseCase", () => {
 
     expect(status).toBe("sent");
     expect(deliveries.records[0]?.status).toBe("sent");
-    const html = provider.sent[0]?.html ?? "";
+    const sent = provider.sent[0];
+    const html = sent?.html ?? "";
     expect(html.match(/<img/g)).toHaveLength(1);
-    expect(html).toContain(Buffer.from("qr:abc123").toString("base64"));
+    expect(sent?.attachments).toHaveLength(1);
+    expect(sent?.attachments?.[0]?.content.equals(Buffer.from("qr:abc123"))).toBe(true);
     expect(html).toContain("def456");
   });
 });
