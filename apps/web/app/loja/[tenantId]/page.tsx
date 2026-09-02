@@ -22,8 +22,11 @@ export default async function TenantEntryPage({
   const { tenantId } = await params;
 
   const venuesResponse = await fetch(backendUrl(`/storefront/venues/${tenantId}`), { cache: "no-store" });
-  const venuesBody: { venues?: Venue[] } = venuesResponse.ok ? await venuesResponse.json() : {};
+  const venuesBody: { organizationName?: string | null; venues?: Venue[] } = venuesResponse.ok
+    ? await venuesResponse.json()
+    : {};
   const venues = venuesBody.venues ?? [];
+  const organizationName = venuesBody.organizationName;
 
   if (venues.length === 1) {
     redirect(`/loja/${tenantId}/${venues[0].id}`);
@@ -45,7 +48,10 @@ export default async function TenantEntryPage({
   return (
     <main className="mx-auto max-w-2xl p-8">
       <Card>
-        <CardHeader title="Escolha onde comprar" description="Este negócio tem mais de um local." />
+        <CardHeader
+          title={organizationName ?? "Escolha onde comprar"}
+          description="Escolha o local onde você quer comprar seu ingresso."
+        />
         <div className="flex flex-col gap-3">
           {venues.map((venue) => (
             <Link

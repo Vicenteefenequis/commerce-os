@@ -9,3 +9,10 @@
 
 - [x] 2.1 Manually exercise all three cases (zero, one, multiple venues) against the running backend and confirm each matches its spec scenario in `specs/storefront/tenant-entry/spec.md`
 - [x] 2.2 Run the web app's existing lint/typecheck/test commands and verify they pass with the new page included
+
+## 3. Business identity and variant clarity (found during manual testing)
+
+- [x] 3.1 `listStorefrontVenuesController` also reads the Organization and returns `organizationName` alongside `venues`; verify via manual request that the field is present and correct
+- [x] 3.2 Tenant entry page shows the organization name as its heading when listing multiple venues; verify against a multi-venue tenant
+- [x] 3.3 Venue product page (`[tenantId]/[venueId]/page.tsx`) shows the organization name above the venue name; verify visually
+- [x] 3.4 Each product renders as its own card with its variants listed with clearer name/price hierarchy (still the same cart behavior); verify against a product with two variants (e.g. "Meia"/"Inteira")

@@ -29,6 +29,13 @@ The system SHALL show a clear, non-broken message instead of an empty or errored
 - **WHEN** an unauthenticated consumer opens a storefront entry page for a tenant that has no Venues
 - **THEN** the system shows a message indicating there is nothing to show yet, rather than an empty list
 
+### Requirement: Tenant entry page identifies the business
+When showing a picker of multiple Venues, the system SHALL display the owning Organization's name so the consumer knows which business they are browsing.
+
+#### Scenario: Multi-venue picker shows the business name
+- **WHEN** an unauthenticated consumer opens a storefront entry page for a tenant with two or more Venues
+- **THEN** the page displays that Organization's name alongside the list of Venues
+
 ### Requirement: Tenant entry page is isolated by tenant
 The system SHALL scope the tenant entry page to the tenant identified in the request and SHALL NOT list or link to another tenant's Venues.
 
