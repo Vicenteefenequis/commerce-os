@@ -45,6 +45,22 @@ export interface SessionsTable {
   created_at: Generated<Timestamp>;
 }
 
+export interface PlatformAdminsTable {
+  id: Generated<string>;
+  email: string;
+  password_hash: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface PlatformSessionsTable {
+  id: Generated<string>;
+  admin_id: string;
+  expires_at: Timestamp;
+  revoked_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
 export interface OrganizationConfigurationTable {
   id: Generated<string>;
   tenant_id: string;
@@ -300,6 +316,8 @@ export interface Database {
   users: UsersTable;
   role_assignments: RoleAssignmentsTable;
   sessions: SessionsTable;
+  platform_admins: PlatformAdminsTable;
+  platform_sessions: PlatformSessionsTable;
   organization_configuration: OrganizationConfigurationTable;
   audit_log: AuditLogTable;
   outbox_events: OutboxEventsTable;

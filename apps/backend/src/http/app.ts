@@ -1,6 +1,8 @@
 import express, { type ErrorRequestHandler } from "express";
 import { resolveIdentity } from "./middleware/resolve-identity.js";
+import { resolvePlatformIdentity } from "./middleware/resolve-platform-identity.js";
 import { identityRouter } from "../modules/identity/infrastructure/identity.routes.js";
+import { platformRouter } from "../modules/platform/infrastructure/platform.routes.js";
 import { organizationRouter } from "../modules/organization/infrastructure/organization.routes.js";
 import { venueRouter } from "../modules/venue/infrastructure/venue.routes.js";
 import { configurationRouter } from "../modules/configuration/infrastructure/configuration.routes.js";
@@ -31,12 +33,14 @@ export function createApp() {
     }),
   );
   app.use(resolveIdentity);
+  app.use(resolvePlatformIdentity);
 
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
 
   app.use(identityRouter);
+  app.use(platformRouter);
   app.use(organizationRouter);
   app.use(venueRouter);
   app.use(configurationRouter);

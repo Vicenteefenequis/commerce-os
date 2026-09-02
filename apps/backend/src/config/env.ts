@@ -36,6 +36,12 @@ export const env = {
   ),
   sessionCookieName: process.env.SESSION_COOKIE_NAME ?? "cos_session",
   sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 60 * 60 * 24 * 7),
+  /**
+   * Distinct from sessionCookieName so a platform admin session and a
+   * tenant admin session can coexist in the same browser without either
+   * overwriting the other (add-platform-admin-console design.md).
+   */
+  platformSessionCookieName: process.env.PLATFORM_SESSION_COOKIE_NAME ?? "cos_platform_session",
   isProduction: (process.env.NODE_ENV ?? "development") === "production",
   /**
    * Optional, not `required()`: most of the app (and its tests) has
