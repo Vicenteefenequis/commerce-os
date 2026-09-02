@@ -13,6 +13,7 @@ import { createVenue } from "./actions";
 interface Venue {
   id: string;
   name: string;
+  slug: string;
 }
 
 export function VenuesContent({ venues }: { venues: Venue[] }) {
@@ -63,6 +64,7 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
             <TableRow>
               <TableHeaderCell>ID</TableHeaderCell>
               <TableHeaderCell>Nome</TableHeaderCell>
+              <TableHeaderCell>Slug</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -70,6 +72,7 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
               <TableRow key={venue.id}>
                 <TableCell className="font-mono text-xs">{venue.id}</TableCell>
                 <TableCell>{venue.name}</TableCell>
+                <TableCell className="font-mono text-xs">{venue.slug}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -6,6 +6,7 @@ import { VenuesContent } from "./venues-content";
 interface Venue {
   id: string;
   name: string;
+  slug: string;
 }
 
 export default async function VenuesPage() {
