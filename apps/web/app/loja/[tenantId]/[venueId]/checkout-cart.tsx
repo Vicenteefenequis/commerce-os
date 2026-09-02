@@ -135,22 +135,29 @@ export function CheckoutCart({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader title="Produtos" />
-        <div className="flex flex-col gap-4">
-          {products.map((product) => (
-            <div key={product.id} className="flex flex-col gap-3">
-              <p className="text-sm font-medium text-fg">{product.name}</p>
-              {product.variants.map((variant) => {
-                const line = cart[variant.id];
-                return (
-                  <div key={variant.id} className="flex flex-wrap items-end gap-3 pl-2">
-                    <div className="flex-1 text-sm text-fg-muted">
-                      {variant.name} - {formatCents(variant.priceCents)}
-                    </div>
+      {products.map((product) => (
+        <Card key={product.id}>
+          <CardHeader
+            title={product.name}
+            description={
+              product.variants.length > 1
+                ? `${product.variants.length} tipos de ingresso disponíveis`
+                : undefined
+            }
+          />
+          <div className="flex flex-col divide-y divide-border">
+            {product.variants.map((variant) => {
+              const line = cart[variant.id];
+              return (
+                <div key={variant.id} className="flex flex-wrap items-end justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="text-sm font-medium text-fg">{variant.name}</p>
+                    <p className="text-sm text-fg-muted">{formatCents(variant.priceCents)}</p>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
                     {variant.resourceId && (line?.quantity ?? 0) > 0 && (
                       <Input
-                        label="Data"
+                        label="Data da visita"
                         type="date"
                         value={line?.period ?? todayIsoDate()}
                         onChange={(e) => setPeriod(variant.id, e.target.value)}
@@ -165,12 +172,12 @@ export function CheckoutCart({
                       onChange={(e) => setQuantity(variant.id, Number(e.target.value))}
                     />
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </Card>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ))}
 
       <Card>
         <CardHeader title="Seus dados" />

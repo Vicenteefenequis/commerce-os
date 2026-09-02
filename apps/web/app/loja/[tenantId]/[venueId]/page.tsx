@@ -31,7 +31,9 @@ export default async function StorefrontPage({
     );
   }
 
-  const venuesBody: { venues?: Venue[] } = venuesResponse.ok ? await venuesResponse.json() : {};
+  const venuesBody: { organizationName?: string | null; venues?: Venue[] } = venuesResponse.ok
+    ? await venuesResponse.json()
+    : {};
   const venue = venuesBody.venues?.find((v) => v.id === venueId);
 
   const productsBody: { products?: StorefrontProduct[] } = await productsResponse.json();
@@ -39,7 +41,12 @@ export default async function StorefrontPage({
 
   return (
     <main className="mx-auto max-w-2xl p-8">
-      <h1 className="mb-6 text-xl font-semibold text-fg">{venue?.name ?? "Loja"}</h1>
+      <div className="mb-6">
+        {venuesBody.organizationName && (
+          <p className="text-sm font-medium text-fg-muted">{venuesBody.organizationName}</p>
+        )}
+        <h1 className="text-xl font-semibold text-fg">{venue?.name ?? "Loja"}</h1>
+      </div>
       <CheckoutCart tenantId={tenantId} venueId={venueId} products={products} />
     </main>
   );

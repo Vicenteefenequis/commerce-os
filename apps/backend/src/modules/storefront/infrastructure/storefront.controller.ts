@@ -5,6 +5,7 @@ import { KyselyProductRepository } from "../../catalog/infrastructure/product-re
 import { KyselyCapacityPeriodRepository } from "../../capacity/infrastructure/capacity-period-repository.kysely.js";
 import { GetAvailableCapacityUseCase } from "../../capacity/application/get-available-capacity.usecase.js";
 import { ListVenuesUseCase } from "../../venue/application/list-venues.usecase.js";
+import { KyselyOrganizationRepository } from "../../organization/infrastructure/organization-repository.kysely.js";
 import {
   ListStorefrontProductsUseCase,
   VenueNotFoundError,
@@ -17,11 +18,17 @@ import {
 export async function listStorefrontVenuesController(req: Request, trx: Trx): Promise<TxResult> {
   const { tenantId } = req.params as { tenantId: string };
 
-  const venues = await new ListVenuesUseCase(new KyselyVenueRepository(trx)).execute(tenantId);
+  const [organization, venues] = await Promise.all([
+    new KyselyOrganizationRepository(trx).findById(tenantId),
+    new ListVenuesUseCase(new KyselyVenueRepository(trx)).execute(tenantId),
+  ]);
 
   return {
     status: 200,
-    body: { venues: venues.map((venue) => ({ id: venue.id, name: venue.name })) },
+    body: {
+      organizationName: organization?.name ?? null,
+      venues: venues.map((venue) => ({ id: venue.id, name: venue.name })),
+    },
   };
 }
 
