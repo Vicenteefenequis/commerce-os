@@ -37,6 +37,13 @@ The system SHALL allow an unauthenticated request to look up available capacity 
 - **WHEN** an unauthenticated request looks up availability for a variant that references no Resource
 - **THEN** the system reports no capacity constraint for that variant
 
+### Requirement: Storefront venue listing includes the organization name
+The system SHALL include the owning Organization's name alongside the Venue list returned by the storefront venue listing, so a consumer can see which business they are browsing.
+
+#### Scenario: Venue listing includes the organization name
+- **WHEN** an unauthenticated request lists Venues for a tenant that exists
+- **THEN** the response includes that Organization's name in addition to its Venues
+
 ### Requirement: Storefront reads are isolated by tenant
 The system SHALL scope every storefront read to the tenant identified in the request and SHALL NOT return another tenant's Venues, Products, or availability.
 
