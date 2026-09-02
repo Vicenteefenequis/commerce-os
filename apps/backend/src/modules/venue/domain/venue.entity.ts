@@ -4,6 +4,7 @@ export interface VenueProps {
   id: string;
   tenantId: string;
   name: string;
+  slug: string;
 }
 
 /** Physical establishment belonging to an Organization (spec: foundation/venue). */
@@ -13,6 +14,9 @@ export class Venue {
   static create(props: VenueProps): Venue {
     if (!props.name || props.name.trim().length === 0) {
       throw new InvalidVenueError("name is required");
+    }
+    if (!props.slug || props.slug.trim().length === 0) {
+      throw new InvalidVenueError("slug is required");
     }
     return new Venue(props);
   }
@@ -27,5 +31,9 @@ export class Venue {
 
   get name(): string {
     return this.props.name;
+  }
+
+  get slug(): string {
+    return this.props.slug;
   }
 }

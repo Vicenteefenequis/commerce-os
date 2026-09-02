@@ -5,13 +5,13 @@ import type { VenueRepositoryPort } from "../domain/ports.js";
 export class KyselyVenueRepository implements VenueRepositoryPort {
   constructor(private readonly trx: Trx) {}
 
-  async create(venue: { id: string; tenantId: string; name: string }): Promise<Venue> {
+  async create(venue: { id: string; tenantId: string; name: string; slug: string }): Promise<Venue> {
     const row = await this.trx
       .insertInto("venues")
-      .values({ id: venue.id, tenant_id: venue.tenantId, name: venue.name })
+      .values({ id: venue.id, tenant_id: venue.tenantId, name: venue.name, slug: venue.slug })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name });
+    return Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name, slug: row.slug });
   }
 
   async listByTenant(tenantId: string): Promise<Venue[]> {
@@ -20,7 +20,9 @@ export class KyselyVenueRepository implements VenueRepositoryPort {
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .execute();
-    return rows.map((row) => Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name }));
+    return rows.map((row) =>
+      Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name, slug: row.slug }),
+    );
   }
 
   async findById(tenantId: string, id: string): Promise<Venue | null> {
@@ -30,6 +32,16 @@ export class KyselyVenueRepository implements VenueRepositoryPort {
       .where("tenant_id", "=", tenantId)
       .where("id", "=", id)
       .executeTakeFirst();
-    return row ? Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name }) : null;
+    return row ? Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name, slug: row.slug }) : null;
+  }
+
+  async findBySlug(tenantId: string, slug: string): Promise<Venue | null> {
+    const row = await this.trx
+      .selectFrom("venues")
+      .selectAll()
+      .where("tenant_id", "=", tenantId)
+      .where("slug", "=", slug)
+      .executeTakeFirst();
+    return row ? Venue.create({ id: row.id, tenantId: row.tenant_id, name: row.name, slug: row.slug }) : null;
   }
 }

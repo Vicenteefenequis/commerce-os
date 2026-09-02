@@ -4,12 +4,14 @@ import { sql } from "kysely";
 import request from "supertest";
 import { createApp } from "../../../http/app.js";
 import { db } from "../../../db/kysely.js";
+import { slugify } from "../../../shared-kernel/slug.js";
 
 /**
- * spec: storefront/catalog - public, unauthenticated venue/product/
- * availability reads, tenant-scoped and filtered by channel visibility
- * and availability window. Requires a reachable Postgres; skips itself
- * when unreachable, same convention as dashboard.routes.test.ts.
+ * spec: storefront/catalog, storefront/tenant-entry - public,
+ * unauthenticated venue/product/availability reads, addressed by
+ * tenant/venue slug, tenant-scoped and filtered by channel visibility and
+ * availability window. Requires a reachable Postgres; skips itself when
+ * unreachable, same convention as dashboard.routes.test.ts.
  */
 let dbReachable = true;
 
@@ -30,10 +32,15 @@ afterAll(async () => {
 async function seedTenantWithVenue(name: string) {
   const tenantId = randomUUID();
   const venueId = randomUUID();
-  await db.insertInto("organizations").values({ id: tenantId, name }).execute();
+  const tenantSlug = `${slugify(name)}-${tenantId.slice(0, 8)}`;
+  const venueSlug = `${slugify(`${name} Venue`)}-${venueId.slice(0, 8)}`;
+  await db.insertInto("organizations").values({ id: tenantId, name, slug: tenantSlug }).execute();
   await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
-  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: `${name} Venue` }).execute();
-  return { tenantId, venueId };
+  await db
+    .insertInto("venues")
+    .values({ id: venueId, tenant_id: tenantId, name: `${name} Venue`, slug: venueSlug })
+    .execute();
+  return { tenantId, tenantSlug, venueId, venueSlug };
 }
 
 async function seedProduct(
@@ -93,21 +100,50 @@ async function seedResource(tenantId: string, venueId: string, defaultCapacity: 
 }
 
 describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () => {
-  it("GET /storefront/venues/:tenantId is isolated by tenant and requires no authentication", async () => {
+  it("GET /storefront/tenants/:tenantSlug resolves the tenant by slug", async () => {
+    const a = await seedTenantWithVenue("Zoo Tenant Lookup");
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${a.tenantSlug}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      tenantId: a.tenantId,
+      tenantSlug: a.tenantSlug,
+      organizationName: "Zoo Tenant Lookup",
+    });
+  });
+
+  it("GET /storefront/tenants/:tenantSlug 404s for an unknown slug", async () => {
+    const app = createApp();
+    const res = await request(app).get("/storefront/tenants/does-not-exist");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /storefront/tenants/:tenantSlug/venues is isolated by tenant and requires no authentication", async () => {
     const a = await seedTenantWithVenue("Zoo A");
     const b = await seedTenantWithVenue("Zoo B");
 
     const app = createApp();
-    const res = await request(app).get(`/storefront/venues/${a.tenantId}`);
+    const res = await request(app).get(`/storefront/tenants/${a.tenantSlug}/venues`);
 
     expect(res.status).toBe(200);
+    expect(res.body.organizationName).toBe("Zoo A");
     expect(res.body.venues).toHaveLength(1);
-    expect(res.body.venues[0].id).toBe(a.venueId);
+    expect(res.body.venues[0]).toMatchObject({ id: a.venueId, slug: a.venueSlug });
     expect(res.body.venues.map((v: { id: string }) => v.id)).not.toContain(b.venueId);
   });
 
-  it("GET /storefront/venues/:tenantId/:venueId/products includes visible+available products and excludes channel-hidden and out-of-window ones", async () => {
-    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Catálogo");
+  it("GET /storefront/tenants/:tenantSlug/venues 404s for an unknown tenant slug", async () => {
+    const app = createApp();
+    const res = await request(app).get("/storefront/tenants/does-not-exist/venues");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /storefront/tenants/:tenantSlug/venues/:venueSlug/products includes visible+available products and excludes channel-hidden and out-of-window ones", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Catálogo");
 
     const visible = await seedProduct(tenantId, venueId, { channels: [] });
     const explicitlyOnStorefront = await seedProduct(tenantId, venueId, { channels: ["storefront"] });
@@ -120,9 +156,10 @@ describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () =>
     });
 
     const app = createApp();
-    const res = await request(app).get(`/storefront/venues/${tenantId}/${venueId}/products`);
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/products`);
 
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ tenantId, venueId, venueSlug });
     const ids = res.body.products.map((p: { id: string }) => p.id);
     expect(ids).toContain(visible.productId);
     expect(ids).toContain(explicitlyOnStorefront.productId);
@@ -134,40 +171,53 @@ describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () =>
     expect(returned.variants[0]).toMatchObject({ name: "Único", priceCents: 2500 });
   });
 
-  it("GET /storefront/venues/:tenantId/:venueId/products 404s for a venue that does not belong to the tenant", async () => {
-    const { tenantId } = await seedTenantWithVenue("Zoo Sem Venue");
+  it("GET /storefront/tenants/:tenantSlug/venues/:venueSlug/products 404s for a venue slug that does not belong to the tenant", async () => {
+    const { tenantSlug } = await seedTenantWithVenue("Zoo Sem Venue");
     const other = await seedTenantWithVenue("Zoo Outro");
 
     const app = createApp();
-    const res = await request(app).get(`/storefront/venues/${tenantId}/${other.venueId}/products`);
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${other.venueSlug}/products`);
 
     expect(res.status).toBe(404);
   });
 
-  it("GET /storefront/variants/:tenantId/:variantId/availability reports available capacity for a resource-backed variant", async () => {
-    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Capacidade");
+  it("GET .../variants/:variantId/availability reports available capacity for a resource-backed variant", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Capacidade");
     const resourceId = await seedResource(tenantId, venueId, 40);
     const { variantId } = await seedProduct(tenantId, venueId, { resourceId });
 
     const app = createApp();
     const res = await request(app).get(
-      `/storefront/variants/${tenantId}/${variantId}/availability?period=2026-06-15`,
+      `/storefront/tenants/${tenantSlug}/venues/${venueSlug}/variants/${variantId}/availability?period=2026-06-15`,
     );
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ variantId, constrained: true, availableCapacity: 40 });
   });
 
-  it("GET /storefront/variants/:tenantId/:variantId/availability reports no constraint for a variant without a resource", async () => {
-    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Sem Recurso");
+  it("GET .../variants/:variantId/availability reports no constraint for a variant without a resource", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Sem Recurso");
     const { variantId } = await seedProduct(tenantId, venueId, { resourceId: null });
 
     const app = createApp();
     const res = await request(app).get(
-      `/storefront/variants/${tenantId}/${variantId}/availability?period=2026-06-15`,
+      `/storefront/tenants/${tenantSlug}/venues/${venueSlug}/variants/${variantId}/availability?period=2026-06-15`,
     );
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ variantId, constrained: false, availableCapacity: null });
+  });
+
+  it("GET .../variants/:variantId/availability 404s for a venue slug that does not belong to the tenant", async () => {
+    const { tenantId, tenantSlug, venueId } = await seedTenantWithVenue("Zoo Availability Venue Mismatch");
+    const other = await seedTenantWithVenue("Zoo Availability Outro");
+    const { variantId } = await seedProduct(tenantId, venueId, { resourceId: null });
+
+    const app = createApp();
+    const res = await request(app).get(
+      `/storefront/tenants/${tenantSlug}/venues/${other.venueSlug}/variants/${variantId}/availability?period=2026-06-15`,
+    );
+
+    expect(res.status).toBe(404);
   });
 });

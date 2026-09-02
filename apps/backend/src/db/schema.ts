@@ -5,6 +5,7 @@ type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface OrganizationsTable {
   id: Generated<string>;
   name: string;
+  slug: string;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }
@@ -13,6 +14,7 @@ export interface VenuesTable {
   id: Generated<string>;
   tenant_id: string;
   name: string;
+  slug: string;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }

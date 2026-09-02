@@ -90,10 +90,10 @@ function buildScenario(options: ScenarioOptions = {}) {
   const reservationId = options.reservationPeriod ? randomUUID() : null;
   const code = `TCK-${randomUUID()}`;
 
-  const venue = Venue.create({ id: venueId, tenantId, name: "Unidade Norte" });
+  const venue = Venue.create({ id: venueId, tenantId, name: "Unidade Norte", slug: "unidade-norte" });
   // A second Venue in the same Organization, so a scan can be made at a
   // legitimate Venue that is simply not the one the Ticket was sold for.
-  const otherVenue = Venue.create({ id: randomUUID(), tenantId, name: "Unidade Sul" });
+  const otherVenue = Venue.create({ id: randomUUID(), tenantId, name: "Unidade Sul", slug: "unidade-sul" });
   const order = Order.create({
     id: orderId,
     tenantId,

@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 
 interface Venue {
   id: string;
+  slug: string;
   name: string;
 }
 
@@ -17,19 +18,33 @@ interface Venue {
 export default async function TenantEntryPage({
   params,
 }: {
-  params: Promise<{ tenantId: string }>;
+  params: Promise<{ tenantSlug: string }>;
 }) {
-  const { tenantId } = await params;
+  const { tenantSlug } = await params;
 
-  const venuesResponse = await fetch(backendUrl(`/storefront/venues/${tenantId}`), { cache: "no-store" });
-  const venuesBody: { organizationName?: string | null; venues?: Venue[] } = venuesResponse.ok
-    ? await venuesResponse.json()
-    : {};
+  const venuesResponse = await fetch(backendUrl(`/storefront/tenants/${tenantSlug}/venues`), {
+    cache: "no-store",
+  });
+
+  if (!venuesResponse.ok) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <Card>
+          <CardHeader
+            title="Loja não encontrada"
+            description="Não encontramos nenhuma loja disponível neste link."
+          />
+        </Card>
+      </main>
+    );
+  }
+
+  const venuesBody: { organizationName?: string | null; venues?: Venue[] } = await venuesResponse.json();
   const venues = venuesBody.venues ?? [];
   const organizationName = venuesBody.organizationName;
 
   if (venues.length === 1) {
-    redirect(`/loja/${tenantId}/${venues[0].id}`);
+    redirect(`/loja/${tenantSlug}/${venues[0].slug}`);
   }
 
   if (venues.length === 0) {
@@ -37,8 +52,8 @@ export default async function TenantEntryPage({
       <main className="mx-auto max-w-2xl p-8">
         <Card>
           <CardHeader
-            title="Loja não encontrada"
-            description="Não encontramos nenhuma loja disponível neste link."
+            title={organizationName ?? "Loja"}
+            description="Nenhum local disponível para compra no momento."
           />
         </Card>
       </main>
@@ -56,7 +71,7 @@ export default async function TenantEntryPage({
           {venues.map((venue) => (
             <Link
               key={venue.id}
-              href={`/loja/${tenantId}/${venue.id}`}
+              href={`/loja/${tenantSlug}/${venue.slug}`}
               className="rounded-md border border-border p-4 text-sm font-medium text-fg hover:bg-bg-subtle"
             >
               {venue.name}

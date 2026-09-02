@@ -48,14 +48,14 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
   const entitlementId = randomUUID();
   const code = `TCK-${randomUUID()}`;
 
-  await db.insertInto("organizations").values({ id: tenantId, name }).execute();
+  await db.insertInto("organizations").values({ id: tenantId, name, slug: tenantId }).execute();
   await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
 
   await db
     .insertInto("venues")
     .values([
-      { id: venueId, tenant_id: tenantId, name: "Unidade Norte" },
-      { id: otherVenueId, tenant_id: tenantId, name: "Unidade Sul" },
+      { id: venueId, tenant_id: tenantId, name: "Unidade Norte", slug: venueId },
+      { id: otherVenueId, tenant_id: tenantId, name: "Unidade Sul", slug: otherVenueId },
     ])
     .execute();
   await db

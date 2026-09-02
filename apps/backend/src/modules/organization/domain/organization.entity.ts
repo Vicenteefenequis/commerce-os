@@ -3,6 +3,7 @@ export class InvalidOrganizationError extends Error {}
 export interface OrganizationProps {
   id: string;
   name: string;
+  slug: string;
 }
 
 /** Tenant boundary of the platform (spec: foundation/organization). */
@@ -13,6 +14,9 @@ export class Organization {
     if (!props.name || props.name.trim().length === 0) {
       throw new InvalidOrganizationError("name is required");
     }
+    if (!props.slug || props.slug.trim().length === 0) {
+      throw new InvalidOrganizationError("slug is required");
+    }
     return new Organization(props);
   }
 
@@ -22,5 +26,9 @@ export class Organization {
 
   get name(): string {
     return this.props.name;
+  }
+
+  get slug(): string {
+    return this.props.slug;
   }
 }

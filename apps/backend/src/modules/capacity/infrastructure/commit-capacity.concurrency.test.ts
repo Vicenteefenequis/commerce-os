@@ -42,14 +42,14 @@ describe.skipIf(!dbReachable)("CommitCapacityUseCase concurrency (live Postgres)
 
     await db
       .insertInto("organizations")
-      .values({ id: tenantId, name: "Zoo Concorrência" })
+      .values({ id: tenantId, name: "Zoo Concorrência", slug: tenantId })
       .execute();
 
     await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
 
     await db
       .insertInto("venues")
-      .values({ id: venueId, tenant_id: tenantId, name: "Unidade Teste" })
+      .values({ id: venueId, tenant_id: tenantId, name: "Unidade Teste", slug: venueId })
       .execute();
 
     // Capacity for 60; two commitments of 40 each are attempted concurrently -
@@ -109,9 +109,9 @@ describe.skipIf(!dbReachable)("CommitCapacityUseCase concurrency (live Postgres)
     const period = "2026-07-01";
 
     await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
-    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Solo" }).execute();
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Solo", slug: tenantId }).execute();
     await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade" }).execute();
+    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
     await db
       .insertInto("resources")
       .values({ id: resourceId, tenant_id: tenantId, venue_id: venueId, name: "Portão", default_capacity: 10, hard_capacity: true })

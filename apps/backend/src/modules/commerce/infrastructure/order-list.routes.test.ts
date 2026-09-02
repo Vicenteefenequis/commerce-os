@@ -106,13 +106,13 @@ describe.skipIf(!dbReachable)("GET /orders (live Postgres)", () => {
     const venueBId = randomUUID();
 
     await db.insertInto("organizations").values([
-      { id: tenantAId, name: "Zoo A" },
-      { id: tenantBId, name: "Zoo B" },
+      { id: tenantAId, name: "Zoo A", slug: tenantAId },
+      { id: tenantBId, name: "Zoo B", slug: tenantBId },
     ]).execute();
     await sql`select set_config('app.tenant_id', ${tenantAId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueAId, tenant_id: tenantAId, name: "Unidade A" }).execute();
+    await db.insertInto("venues").values({ id: venueAId, tenant_id: tenantAId, name: "Unidade A", slug: venueAId }).execute();
     await sql`select set_config('app.tenant_id', ${tenantBId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B" }).execute();
+    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B", slug: venueBId }).execute();
 
     const orderA1 = await seedOrder(tenantAId, venueAId, "Ingresso A1");
     const orderA2 = await seedOrder(tenantAId, venueAId, "Ingresso A2");
@@ -137,13 +137,13 @@ describe.skipIf(!dbReachable)("GET /orders (live Postgres)", () => {
     const venueBId = randomUUID();
 
     await db.insertInto("organizations").values([
-      { id: tenantAId, name: "Zoo A" },
-      { id: tenantBId, name: "Zoo B" },
+      { id: tenantAId, name: "Zoo A", slug: tenantAId },
+      { id: tenantBId, name: "Zoo B", slug: tenantBId },
     ]).execute();
     await sql`select set_config('app.tenant_id', ${tenantAId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueAId, tenant_id: tenantAId, name: "Unidade A" }).execute();
+    await db.insertInto("venues").values({ id: venueAId, tenant_id: tenantAId, name: "Unidade A", slug: venueAId }).execute();
     await sql`select set_config('app.tenant_id', ${tenantBId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B" }).execute();
+    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B", slug: venueBId }).execute();
 
     const orderAna = await seedOrder(tenantAId, venueAId, "Ingresso Ana", {
       email: "ana@example.com",

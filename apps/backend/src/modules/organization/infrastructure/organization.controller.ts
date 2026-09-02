@@ -1,12 +1,16 @@
 import type { Request } from "express";
 import type { Trx, TxResult } from "../../../http/tx-route.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
-import { CreateOrganizationUseCase } from "../application/create-organization.usecase.js";
+import {
+  CreateOrganizationUseCase,
+  InvalidSlugError,
+  SlugAlreadyExistsError,
+} from "../application/create-organization.usecase.js";
 import { InvalidOrganizationError } from "../domain/organization.entity.js";
 import { KyselyOrganizationRepository } from "./organization-repository.kysely.js";
 
 export async function createOrganizationController(req: Request, trx: Trx): Promise<TxResult> {
-  const { name } = req.body as { name?: string };
+  const { name, slug } = req.body as { name?: string; slug?: string };
 
   const useCase = new CreateOrganizationUseCase(
     new KyselyOrganizationRepository(trx),
@@ -14,11 +18,17 @@ export async function createOrganizationController(req: Request, trx: Trx): Prom
   );
 
   try {
-    const organization = await useCase.execute({ name: name ?? "" });
-    return { status: 201, body: { id: organization.id, name: organization.name } };
+    const organization = await useCase.execute({ name: name ?? "", slug });
+    return {
+      status: 201,
+      body: { id: organization.id, name: organization.name, slug: organization.slug },
+    };
   } catch (err) {
-    if (err instanceof InvalidOrganizationError) {
+    if (err instanceof InvalidOrganizationError || err instanceof InvalidSlugError) {
       return { status: 400, body: { error: err.message } };
+    }
+    if (err instanceof SlugAlreadyExistsError) {
+      return { status: 409, body: { error: err.message } };
     }
     throw err;
   }
@@ -39,5 +49,8 @@ export async function getOrganizationController(req: Request, trx: Trx): Promise
     return { status: 404, body: { error: "organization not found" } };
   }
 
-  return { status: 200, body: { id: organization.id, name: organization.name } };
+  return {
+    status: 200,
+    body: { id: organization.id, name: organization.name, slug: organization.slug },
+  };
 }

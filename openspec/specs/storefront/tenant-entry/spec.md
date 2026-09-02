@@ -7,11 +7,11 @@ Gives an anonymous consumer a public landing page for a tenant's storefront link
 ## Requirements
 
 ### Requirement: Tenant entry page lists venues
-The system SHALL provide a public, account-less page at the tenant's storefront entry point that lists every Venue belonging to that tenant.
+The system SHALL provide a public, account-less page at `/loja/[tenantSlug]`, the tenant's storefront entry point identified by the tenant's slug, that lists every Venue belonging to that tenant.
 
 #### Scenario: Tenant with multiple venues shows a picker
-- **WHEN** an unauthenticated consumer opens a tenant's storefront entry page and that tenant has two or more Venues
-- **THEN** the page lists each Venue by name and links to that Venue's storefront page
+- **WHEN** an unauthenticated consumer opens a tenant's storefront entry page (identified by tenant slug) and that tenant has two or more Venues
+- **THEN** the page lists each Venue by name and links to that Venue's storefront page, identified by the venue's slug
 
 ### Requirement: Single-venue tenant skips the picker
 The system SHALL route the consumer directly to a tenant's only Venue's storefront page, without an intermediate list, when that tenant has exactly one Venue.
@@ -24,7 +24,7 @@ The system SHALL route the consumer directly to a tenant's only Venue's storefro
 The system SHALL show a clear, non-broken message instead of an empty or errored page when the tenant does not exist or has no Venues.
 
 #### Scenario: Unknown tenant
-- **WHEN** an unauthenticated consumer opens a storefront entry page for a tenant id that does not exist
+- **WHEN** an unauthenticated consumer opens a storefront entry page for a tenant slug that does not match any Organization
 - **THEN** the system shows a "not found" message and does not error or show a blank page
 
 #### Scenario: Tenant with zero venues

@@ -39,10 +39,10 @@ async function seedIssuedEntitlement(name: string) {
   const orderLineId = randomUUID();
   const entitlementId = randomUUID();
 
-  await db.insertInto("organizations").values({ id: tenantId, name }).execute();
+  await db.insertInto("organizations").values({ id: tenantId, name, slug: tenantId }).execute();
   await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
 
-  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade" }).execute();
+  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
   await db
     .insertInto("customers")
     .values({ id: customerId, tenant_id: tenantId, email: `ana-${customerId}@example.com`, name: "Ana" })

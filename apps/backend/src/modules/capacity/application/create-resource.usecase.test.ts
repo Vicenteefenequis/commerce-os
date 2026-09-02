@@ -21,6 +21,9 @@ class FakeVenueRepository implements VenueRepositoryPort {
   async findById(tenantId: string, id: string): Promise<Venue | null> {
     return this.venues.find((v) => v.tenantId === tenantId && v.id === id) ?? null;
   }
+  async findBySlug(): Promise<Venue | null> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeResourceRepository implements ResourceRepositoryPort {
@@ -57,7 +60,7 @@ class FakeEventPublisher implements EventPublisherPort {
 
 describe("CreateResourceUseCase", () => {
   const tenantId = randomUUID();
-  const venue = Venue.create({ id: randomUUID(), tenantId, name: "Unidade Norte" });
+  const venue = Venue.create({ id: randomUUID(), tenantId, name: "Unidade Norte", slug: "unidade-norte" });
 
   it("creates a resource under an existing venue", async () => {
     const resources = new FakeResourceRepository();

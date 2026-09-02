@@ -136,19 +136,19 @@ describe.skipIf(!dbReachable)("GET /dashboard/summary (live Postgres)", () => {
     const venueBId = randomUUID();
 
     await db.insertInto("organizations").values([
-      { id: tenantAId, name: "Zoo A" },
-      { id: tenantBId, name: "Zoo B" },
+      { id: tenantAId, name: "Zoo A", slug: tenantAId },
+      { id: tenantBId, name: "Zoo B", slug: tenantBId },
     ]).execute();
     await sql`select set_config('app.tenant_id', ${tenantAId}, false)`.execute(db);
     await db
       .insertInto("venues")
       .values([
-        { id: venueAId, tenant_id: tenantAId, name: "Unidade A" },
-        { id: venueA2Id, tenant_id: tenantAId, name: "Unidade A2" },
+        { id: venueAId, tenant_id: tenantAId, name: "Unidade A", slug: venueAId },
+        { id: venueA2Id, tenant_id: tenantAId, name: "Unidade A2", slug: venueA2Id },
       ])
       .execute();
     await sql`select set_config('app.tenant_id', ${tenantBId}, false)`.execute(db);
-    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B" }).execute();
+    await db.insertInto("venues").values({ id: venueBId, tenant_id: tenantBId, name: "Unidade B", slug: venueBId }).execute();
     await sql`select set_config('app.tenant_id', ${tenantAId}, false)`.execute(db);
 
     const inRangeStart = new Date("2026-06-01T00:00:00Z");
@@ -218,7 +218,7 @@ describe.skipIf(!dbReachable)("GET /dashboard/summary (live Postgres)", () => {
 
   it("rejects a request missing from/to", async () => {
     const tenantId = randomUUID();
-    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo" }).execute();
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo", slug: tenantId }).execute();
     await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
     const cookie = await seedAuthenticatedStaff(tenantId);
 

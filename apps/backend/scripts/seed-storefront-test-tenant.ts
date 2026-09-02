@@ -9,10 +9,19 @@ async function main() {
   const productId = randomUUID();
   const variantId = randomUUID();
 
-  await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Teste Storefront" }).execute();
+  const tenantSlug = `zoo-teste-storefront-${tenantId.slice(0, 8)}`;
+  const venueSlug = "unidade-teste";
+
+  await db
+    .insertInto("organizations")
+    .values({ id: tenantId, name: "Zoo Teste Storefront", slug: tenantSlug })
+    .execute();
   await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
 
-  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade Teste" }).execute();
+  await db
+    .insertInto("venues")
+    .values({ id: venueId, tenant_id: tenantId, name: "Unidade Teste", slug: venueSlug })
+    .execute();
 
   await db
     .insertInto("resources")
@@ -49,7 +58,9 @@ async function main() {
     })
     .execute();
 
-  console.log(JSON.stringify({ tenantId, venueId, resourceId, productId, variantId }, null, 2));
+  console.log(
+    JSON.stringify({ tenantId, tenantSlug, venueId, venueSlug, resourceId, productId, variantId }, null, 2),
+  );
   await db.destroy();
 }
 

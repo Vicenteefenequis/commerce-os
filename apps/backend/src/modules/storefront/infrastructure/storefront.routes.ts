@@ -1,6 +1,7 @@
-import { Router, type Request } from "express";
-import { txRouteWithTenant } from "../../../http/tx-route.js";
+import { Router } from "express";
+import { txRoutePublic } from "../../../http/tx-route.js";
 import {
+  getStorefrontTenantController,
   getStorefrontVariantAvailabilityController,
   listStorefrontProductsController,
   listStorefrontVenuesController,
@@ -10,26 +11,27 @@ export const storefrontRouter = Router();
 
 /**
  * Public, no requireAuth (spec: storefront/catalog - a consumer browses
- * before there is any account or session). tenantId comes from the URL
- * rather than an identity, mirroring the public checkout endpoint's
- * pattern (checkout.routes.ts) since there is no session to resolve it
- * from (design.md decision).
+ * before there is any account or session), keyed by slug rather than
+ * tenant/venue UUID (add-storefront-tenant-landing design.md - "Storefront
+ * routes re-keyed to slug"). The tenant is not known until a use case
+ * resolves the slug against `organizations` inside the handler, so these
+ * use `txRoutePublic` (no `app.tenant_id` set up front) instead of
+ * `txRouteWithTenant` - each use case sets it itself once the tenant is
+ * resolved (see `TenantContextPort`).
  */
-function tenantIdFromParams(req: Request): string {
-  return (req.params as { tenantId?: string }).tenantId ?? "";
-}
+storefrontRouter.get("/storefront/tenants/:tenantSlug", txRoutePublic(getStorefrontTenantController));
 
 storefrontRouter.get(
-  "/storefront/venues/:tenantId",
-  txRouteWithTenant(tenantIdFromParams, listStorefrontVenuesController),
+  "/storefront/tenants/:tenantSlug/venues",
+  txRoutePublic(listStorefrontVenuesController),
 );
 
 storefrontRouter.get(
-  "/storefront/venues/:tenantId/:venueId/products",
-  txRouteWithTenant(tenantIdFromParams, listStorefrontProductsController),
+  "/storefront/tenants/:tenantSlug/venues/:venueSlug/products",
+  txRoutePublic(listStorefrontProductsController),
 );
 
 storefrontRouter.get(
-  "/storefront/variants/:tenantId/:variantId/availability",
-  txRouteWithTenant(tenantIdFromParams, getStorefrontVariantAvailabilityController),
+  "/storefront/tenants/:tenantSlug/venues/:venueSlug/variants/:variantId/availability",
+  txRoutePublic(getStorefrontVariantAvailabilityController),
 );

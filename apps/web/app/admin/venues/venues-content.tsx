@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { slugify } from "@/lib/slug";
 import { createVenue } from "./actions";
 
 interface Venue {
@@ -19,6 +20,14 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+
+  function resetForm() {
+    setSlug("");
+    setSlugTouched(false);
+    setFieldErrors({});
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,11 +39,12 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
 
     setIsSubmitting(false);
     if (result.error) {
-      setFieldErrors({ name: result.error });
+      setFieldErrors({ [result.field ?? "name"]: result.error });
       return;
     }
 
     setDialogOpen(false);
+    resetForm();
     showToast({ title: "Unidade criada", variant: "success" });
   }
 
@@ -66,7 +76,14 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
         </Table>
       </ListPageLayout>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="Nova unidade">
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}
+        title="Nova unidade"
+      >
         <FormPageLayout
           title=""
           onSubmit={onSubmit}
@@ -74,7 +91,25 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
           isSubmitting={isSubmitting}
           fieldErrors={fieldErrors}
         >
-          <Input label="Nome" name="name" required />
+          <Input
+            label="Nome"
+            name="name"
+            required
+            onChange={(e) => {
+              if (!slugTouched) setSlug(slugify(e.target.value));
+            }}
+          />
+          <Input
+            label="Slug (usado no link público da loja)"
+            name="slug"
+            required
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            value={slug}
+            onChange={(e) => {
+              setSlugTouched(true);
+              setSlug(e.target.value);
+            }}
+          />
         </FormPageLayout>
       </Dialog>
     </>

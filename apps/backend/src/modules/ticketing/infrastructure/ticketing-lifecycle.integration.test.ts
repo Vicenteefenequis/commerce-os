@@ -63,9 +63,9 @@ async function seedTenant(name: string) {
   const tenantId = randomUUID();
   const venueId = randomUUID();
 
-  await db.insertInto("organizations").values({ id: tenantId, name }).execute();
+  await db.insertInto("organizations").values({ id: tenantId, name, slug: tenantId }).execute();
   await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
-  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade" }).execute();
+  await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
 
   const variantId = await db.transaction().execute(async (trx) => {
     await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
