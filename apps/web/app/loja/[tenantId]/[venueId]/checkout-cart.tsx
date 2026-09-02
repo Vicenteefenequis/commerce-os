@@ -22,8 +22,6 @@ export interface StorefrontProduct {
 
 interface CartLine {
   quantity: number;
-  /** Visit date, required only for capacity-bound variants (resourceId set). */
-  period: string;
 }
 
 function formatCents(cents: number): string {
@@ -49,6 +47,7 @@ export function CheckoutCart({
   products: StorefrontProduct[];
 }) {
   const router = useRouter();
+  const [visitDate, setVisitDate] = useState(todayIsoDate());
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -74,12 +73,8 @@ export function CheckoutCart({
   function setQuantity(variantId: string, quantity: number) {
     setCart((prev) => ({
       ...prev,
-      [variantId]: { period: prev[variantId]?.period ?? todayIsoDate(), quantity: Math.max(0, quantity) },
+      [variantId]: { quantity: Math.max(0, quantity) },
     }));
-  }
-
-  function setPeriod(variantId: string, period: string) {
-    setCart((prev) => ({ ...prev, [variantId]: { quantity: prev[variantId]?.quantity ?? 0, period } }));
   }
 
   async function handleSubmit() {
@@ -93,14 +88,6 @@ export function CheckoutCart({
       setError("Informe seu nome e e-mail.");
       return;
     }
-    const missingPeriod = selectedLines.some(([variantId, line]) => {
-      const entry = variantsById.get(variantId);
-      return entry?.variant.resourceId && !line.period;
-    });
-    if (missingPeriod) {
-      setError("Selecione a data para os itens que exigem reserva.");
-      return;
-    }
 
     setIsSubmitting(true);
     const result = await submitCheckout({
@@ -112,7 +99,7 @@ export function CheckoutCart({
         return {
           variantId,
           quantity: line.quantity,
-          period: entry?.variant.resourceId ? line.period : undefined,
+          period: entry?.variant.resourceId ? visitDate : undefined,
         };
       }),
     });
@@ -135,6 +122,16 @@ export function CheckoutCart({
 
   return (
     <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader title="Data da visita" />
+        <Input
+          label="Data"
+          type="date"
+          value={visitDate}
+          onChange={(e) => setVisitDate(e.target.value)}
+        />
+      </Card>
+
       {products.map((product) => (
         <Card key={product.id}>
           <CardHeader
@@ -155,14 +152,6 @@ export function CheckoutCart({
                     <p className="text-sm text-fg-muted">{formatCents(variant.priceCents)}</p>
                   </div>
                   <div className="flex flex-wrap items-end gap-3">
-                    {variant.resourceId && (line?.quantity ?? 0) > 0 && (
-                      <Input
-                        label="Data da visita"
-                        type="date"
-                        value={line?.period ?? todayIsoDate()}
-                        onChange={(e) => setPeriod(variant.id, e.target.value)}
-                      />
-                    )}
                     <Input
                       label="Quantidade"
                       type="number"
