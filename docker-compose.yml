@@ -38,18 +38,40 @@ services:
     ports:
       - "4000:4000"
     environment:
-      NODE_ENV: production
+      # Was hardcoded to `production`, silently overriding .env's own
+      # NODE_ENV=development default - that also forces `Secure` on the
+      # session cookie (cookie.ts), which browsers strip on any http://
+      # origin other than localhost (e.g. a phone hitting this over LAN
+      # IP), breaking login there even though it works from a desktop
+      # browser via localhost. `${NODE_ENV:-development}` respects .env
+      # like every other var here; set NODE_ENV=production in .env for a
+      # real HTTPS deployment.
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
       # Connects as the non-superuser app_user role, so RLS (design.md D4)
       # is actually enforced - superusers and table owners bypass RLS.
       DATABASE_URL: postgres://app_user:${APP_DB_PASSWORD:-commerce_os_app}@postgres:5432/${POSTGRES_DB:-commerce_os}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-cos_session}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      # Payments (M3) - Stripe test-mode keys, from .env (never hardcoded here).
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Transactional email (M10) - Resend (if set in .env) still takes
+      # priority over SMTP; SMTP_HOST is the mailpit service's in-network
+      # hostname, not localhost (backend runs in its own container).
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -67,11 +89,23 @@ services:
       # (design.md D6 / see migration 1700000008000) - the worker must
       # scan pending events across all tenants; app_user cannot.
       DATABASE_URL: postgres://outbox_worker_user:${OUTBOX_DB_PASSWORD:-commerce_os_outbox}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      # Transactional email (M10) - the outbox consumer that issues
+      # tickets and sends the confirmation email runs in THIS container,
+      # not `backend` - it needs its own copy of these vars (see the
+      # `backend` service above for the same rationale).
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
 
   mailpit:
     image: axllent/mailpit:latest
@@ -83,6 +117,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     ports:
       - "3000:3000"
     environment:
