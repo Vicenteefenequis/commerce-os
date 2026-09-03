@@ -44,7 +44,10 @@ export function DashboardContent({
         <p className="mt-1 text-sm text-fg-muted">Vendas, pedidos e visitantes deste tenant.</p>
       </div>
 
-      <form method="GET" className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+      <form
+        method="GET"
+        className="flex flex-col flex-wrap gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end"
+      >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="dashboard-period" className="text-sm font-medium text-fg">
             Período
@@ -53,7 +56,7 @@ export function DashboardContent({
             id="dashboard-period"
             name="period"
             defaultValue={period}
-            className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           >
             {PERIOD_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -71,7 +74,7 @@ export function DashboardContent({
             type="date"
             name="from"
             defaultValue={toDateInputValue(from)}
-            className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -83,7 +86,7 @@ export function DashboardContent({
             type="date"
             name="to"
             defaultValue={toDateInputValue(to)}
-            className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -94,7 +97,7 @@ export function DashboardContent({
             id="dashboard-venue"
             name="venueId"
             defaultValue={venueId}
-            className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           >
             <option value="">Todas</option>
             {venues.map((venue) => (
@@ -106,7 +109,7 @@ export function DashboardContent({
         </div>
         <button
           type="submit"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90"
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90 sm:w-auto"
         >
           Aplicar
         </button>

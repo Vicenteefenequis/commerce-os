@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { backendFetch } from "@/lib/backend-fetch";
 import { logout } from "@/app/admin/login/actions";
+import { AdminNavClient } from "./admin-nav-client";
 
 const LINKS = [
   { href: "/admin/dashboard", label: "Dashboard" },
@@ -18,32 +18,5 @@ export async function AdminNav() {
     ? await response.json()
     : null;
 
-  return (
-    <nav className="flex items-center gap-4 border-b border-border px-8 py-4">
-      <span className="text-sm font-semibold text-fg">Commerce OS</span>
-      <div className="flex gap-3">
-        {LINKS.map((link) => (
-          <Link key={link.href} href={link.href} className="text-sm text-fg-muted hover:text-fg">
-            {link.label}
-          </Link>
-        ))}
-      </div>
-      {session ? (
-        <div className="ml-auto flex items-center gap-3 text-sm text-fg-muted">
-          <span>
-            {session.email} · {session.organizationName}
-          </span>
-          <form action={logout}>
-            <button type="submit" className="hover:text-fg">
-              Sair
-            </button>
-          </form>
-        </div>
-      ) : (
-        <Link href="/admin/login" className="ml-auto text-sm text-fg-muted hover:text-fg">
-          Entrar
-        </Link>
-      )}
-    </nav>
-  );
+  return <AdminNavClient links={LINKS} session={session} logoutAction={logout} />;
 }

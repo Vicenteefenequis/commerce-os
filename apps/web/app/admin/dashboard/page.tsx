@@ -58,7 +58,7 @@ export default async function DashboardPage({
   return (
     <>
       <AdminNav />
-      <main className="mx-auto max-w-5xl p-8">
+      <main className="mx-auto max-w-5xl p-4 sm:p-8">
         <DashboardContent summary={summary} venues={venues} period={period} venueId={venueId} from={from} to={to} />
       </main>
     </>
