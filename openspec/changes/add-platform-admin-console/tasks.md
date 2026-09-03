@@ -37,8 +37,8 @@
 
 ## 7. First owner user at tenant creation
 
-- [ ] 7.1 Add a `create` method to `UserRepositoryPort`/`KyselyUserRepository` (id, tenantId, email, passwordHash) and to `RoleAssignmentRepositoryPort`/`KyselyRoleAssignmentRepository` (id, tenantId, userId, role), and verify unit/integration tests cover both
-- [ ] 7.2 Add a use case that creates an Organization, then a User under it, then assigns that user the `owner` role, all within one transaction, and verify a test confirms no Organization is left behind when user/role creation fails
-- [ ] 7.3 Replace the reused `createOrganizationController` on `POST /platform/organizations` with a platform-specific controller that accepts `name`/`slug`/`email`/`password` and calls the new use case, and verify an integration test creates Organization + User + owner role_assignment in one call and the returned user can subsequently log in via `POST /auth/login` with that tenant id
-- [ ] 7.4 Update the "new tenant" form in `apps/web/app/platform/tenants` to also collect email and password for the first owner, wired through `createTenant`'s action, and verify manually that after creating a tenant its owner can log in at `/admin/login`
-- [ ] 7.5 Run the full backend test suite again and verify nothing regresses
+- [x] 7.1 Add a `create` method to `UserRepositoryPort`/`KyselyUserRepository` (id, tenantId, email, passwordHash) and to `RoleAssignmentRepositoryPort`/`KyselyRoleAssignmentRepository` (id, tenantId, userId, role), and verify unit/integration tests cover both
+- [x] 7.2 Add a use case that creates an Organization, then a User under it, then assigns that user the `owner` role, all within one transaction, and verify a test confirms no Organization is left behind when user/role creation fails
+- [x] 7.3 Replace the reused `createOrganizationController` on `POST /platform/organizations` with a platform-specific controller that accepts `name`/`slug`/`email`/`password` and calls the new use case, and verify an integration test creates Organization + User + owner role_assignment in one call and the returned user can subsequently log in via `POST /auth/login` with that tenant id
+- [x] 7.4 Update the "new tenant" form in `apps/web/app/platform/tenants` to also collect email and password for the first owner, wired through `createTenant`'s action, and verify manually that after creating a tenant its owner can log in at `/admin/login`
+- [x] 7.5 Run the full backend test suite again and verify nothing regresses

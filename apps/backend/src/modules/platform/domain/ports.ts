@@ -11,3 +11,8 @@ export interface PlatformSessionRepositoryPort {
   findById(sessionId: string): Promise<PlatformSession | null>;
   revoke(sessionId: string): Promise<void>;
 }
+
+/** Sets the transaction-local `app.tenant_id` once a tenant becomes known mid-request (e.g. right after its Organization is created). */
+export interface TenantContextPort {
+  setTenantId(tenantId: string): Promise<void>;
+}

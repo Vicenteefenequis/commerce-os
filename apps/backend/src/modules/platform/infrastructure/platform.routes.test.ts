@@ -78,7 +78,7 @@ describe.skipIf(!dbReachable)("Platform admin console (live Postgres)", () => {
     expect(create.status).toBe(401);
   });
 
-  it("lists every organization and creates one with a chosen name/slug", async () => {
+  it("lists every organization and creates one with its first owner", async () => {
     const { id: adminId } = await seedPlatformAdmin("secret123");
     const cookie = await seedPlatformSessionCookie(adminId);
     const app = createApp();
@@ -94,16 +94,23 @@ describe.skipIf(!dbReachable)("Platform admin console (live Postgres)", () => {
     expect(list.body.organizations.some((o: { id: string }) => o.id === existingId)).toBe(true);
 
     const slug = `novo-tenant-${randomUUID().slice(0, 8)}`;
+    const ownerEmail = `owner-${randomUUID()}@example.com`;
     const create = await request(app)
       .post("/platform/organizations")
       .set("Cookie", cookie)
-      .send({ name: "Novo Tenant", slug });
+      .send({ name: "Novo Tenant", slug, email: ownerEmail, password: "owner-secret" });
 
     expect(create.status).toBe(201);
     expect(create.body.slug).toBe(slug);
+    expect(create.body.owner.email).toBe(ownerEmail);
 
     const listAfter = await request(app).get("/platform/organizations").set("Cookie", cookie);
     expect(listAfter.body.organizations.some((o: { slug: string }) => o.slug === slug)).toBe(true);
+
+    const login = await request(app)
+      .post("/auth/login")
+      .send({ tenantId: create.body.id, email: ownerEmail, password: "owner-secret" });
+    expect(login.status).toBe(200);
   });
 
   it("rejects creating an organization with a slug that already exists", async () => {
@@ -117,9 +124,39 @@ describe.skipIf(!dbReachable)("Platform admin console (live Postgres)", () => {
     const res = await request(app)
       .post("/platform/organizations")
       .set("Cookie", cookie)
-      .send({ name: "Duplicado", slug });
+      .send({ name: "Duplicado", slug, email: `dup-${randomUUID()}@example.com`, password: "secret" });
 
     expect(res.status).toBe(409);
+  });
+
+  it("rejects creating a tenant without an owner email/password", async () => {
+    const { id: adminId } = await seedPlatformAdmin("secret123");
+    const cookie = await seedPlatformSessionCookie(adminId);
+    const app = createApp();
+
+    const res = await request(app)
+      .post("/platform/organizations")
+      .set("Cookie", cookie)
+      .send({ name: "Sem Dono", slug: `sem-dono-${randomUUID().slice(0, 8)}` });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("creates no Organization when the owner cannot be created", async () => {
+    const { id: adminId } = await seedPlatformAdmin("secret123");
+    const cookie = await seedPlatformSessionCookie(adminId);
+    const app = createApp();
+
+    const slug = `rollback-tenant-${randomUUID().slice(0, 8)}`;
+    const res = await request(app)
+      .post("/platform/organizations")
+      .set("Cookie", cookie)
+      .send({ name: "Rollback Tenant", slug, email: "not-an-email", password: "secret" });
+
+    expect(res.status).toBe(400);
+
+    const orgs = await db.selectFrom("organizations").selectAll().where("slug", "=", slug).execute();
+    expect(orgs).toHaveLength(0);
   });
 
   it("keeps a platform session and a tenant session independent", async () => {

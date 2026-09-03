@@ -113,6 +113,8 @@ export function TenantsContent({ tenants }: { tenants: Tenant[] }) {
               setSlug(e.target.value);
             }}
           />
+          <Input label="E-mail do dono" name="email" type="email" required />
+          <Input label="Senha do dono" name="password" type="password" required />
         </FormPageLayout>
       </Dialog>
     </>

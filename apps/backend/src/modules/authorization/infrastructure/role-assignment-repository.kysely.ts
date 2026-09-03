@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import type { Database } from "../../../db/schema.js";
 import type { Trx } from "../../../http/tx-route.js";
@@ -20,5 +21,17 @@ export class KyselyRoleAssignmentRepository implements RoleAssignmentRepositoryP
       .where("user_id", "=", userId)
       .execute();
     return rows.map((row) => row.role).filter(isRole);
+  }
+
+  async create(assignment: { tenantId: string; userId: string; role: Role }): Promise<void> {
+    await this.conn
+      .insertInto("role_assignments")
+      .values({
+        id: randomUUID(),
+        tenant_id: assignment.tenantId,
+        user_id: assignment.userId,
+        role: assignment.role,
+      })
+      .execute();
   }
 }

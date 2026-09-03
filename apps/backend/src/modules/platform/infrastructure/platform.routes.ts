@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { txRoutePublic } from "../../../http/tx-route.js";
 import { requirePlatformAuth } from "../../../http/middleware/require-platform-auth.js";
-import { createOrganizationController } from "../../organization/infrastructure/organization.controller.js";
 import {
+  createTenantWithOwnerController,
   listOrganizationsController,
   platformLoginController,
   platformLogoutController,
@@ -21,5 +21,5 @@ platformRouter.get(
 platformRouter.post(
   "/platform/organizations",
   requirePlatformAuth,
-  txRoutePublic(createOrganizationController),
+  txRoutePublic(createTenantWithOwnerController),
 );

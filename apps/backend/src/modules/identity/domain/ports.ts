@@ -9,6 +9,7 @@ export interface PasswordHasherPort {
 export interface UserRepositoryPort {
   findByTenantAndEmail(tenantId: string, email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
+  create(user: { tenantId: string; email: string; passwordHash: string }): Promise<User>;
 }
 
 export interface SessionRepositoryPort {

@@ -17,6 +17,9 @@ class FakeUserRepository implements UserRepositoryPort {
   async findById(): Promise<User | null> {
     return this.user;
   }
+  async create(user: { tenantId: string; email: string; passwordHash: string }): Promise<User> {
+    return User.create({ id: randomUUID(), ...user });
+  }
 }
 
 class FakeSessionRepository implements SessionRepositoryPort {
