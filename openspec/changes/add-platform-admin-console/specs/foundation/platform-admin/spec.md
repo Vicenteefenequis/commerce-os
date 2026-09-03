@@ -42,12 +42,16 @@ A platform admin SHALL be able to retrieve the list of every Organization regist
 - **THEN** the system returns every Organization registered on the platform, including its name and slug
 
 ### Requirement: Register a tenant as platform admin
-A platform admin SHALL be able to register a new Organization by choosing its name and slug, subject to the same validation and uniqueness rules as Organization creation.
+A platform admin SHALL be able to register a new Organization by choosing its name and slug together with an email and password for that Organization's first administrative user, subject to the same validation and uniqueness rules as Organization creation. The system SHALL create the Organization, the first user, and that user's `owner` role assignment as a single atomic operation.
 
-#### Scenario: Platform admin creates a tenant
-- **WHEN** an authenticated platform admin submits a name and slug for a new Organization
-- **THEN** the system creates the Organization using that name and slug, following the same slug validation and uniqueness rules defined for Organization creation
+#### Scenario: Platform admin creates a tenant with its first owner
+- **WHEN** an authenticated platform admin submits a name and slug for a new Organization together with an email and password for its first user
+- **THEN** the system creates the Organization using that name and slug, creates a user under that Organization with the given email and password, assigns that user the `owner` role, and that user can subsequently authenticate against that Organization
 
 #### Scenario: Duplicate slug rejected
 - **WHEN** an authenticated platform admin submits a slug that already belongs to another Organization
 - **THEN** the system rejects the operation and no Organization is created
+
+#### Scenario: Creation fails atomically if the first user cannot be created
+- **WHEN** an authenticated platform admin submits tenant and owner details but creating the first user fails (e.g. an invalid email)
+- **THEN** the system rejects the entire operation and no Organization, user, or role assignment is created

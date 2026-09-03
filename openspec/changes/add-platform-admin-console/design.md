@@ -6,11 +6,13 @@ See proposal.md - Why. Key constraints from the current codebase:
 - `organizations` is deliberately the one table with **no RLS** and **no `tenant_id` column** - it is the tenant boundary itself (`tx-route.ts` comment: "only tables without RLS ... may be touched here").
 - `req.identity` (`http/identity.ts`) is a fixed shape `{ userId, tenantId, roles }` used throughout `requireAuth`/`requirePermission`/`txRoute`; every existing route assumes an identity belongs to one tenant.
 - The tenant session cookie name comes from `env.sessionCookieName` (`SESSION_COOKIE_NAME`, default `cos_session`).
+- Neither `UserRepositoryPort` (`identity/domain/ports.ts`) nor `RoleAssignmentRepositoryPort` (`authorization/domain/ports.ts`) has a `create` method today - every `users`/`role_assignments` row in the codebase's history has come from a manual DB seed script, never from application code. Creating a tenant's first user is a genuinely new capability, not a gap in an existing one.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - A platform admin can authenticate without any tenant context and manage (list, register) Organizations.
+- Registering a tenant also creates its first login-capable user (`owner` role) in the same operation - a platform admin never has to know a tenant's UUID or manually seed a user to hand off a working login.
 - Zero risk of a platform session being confused with, or granting, tenant-scoped access (and vice versa).
 - Close the current public/unauthenticated `POST /organizations` bootstrap hole.
 
@@ -19,6 +21,7 @@ See proposal.md - Why. Key constraints from the current codebase:
 - Any UI or flow for creating the *first* platform admin - that is a deploy-time seed/migration concern.
 - Renaming/deleting/deactivating an existing Organization - only list + create are in scope.
 - Platform-admin roles/permissions beyond a single implicit "can manage tenants" - no fine-grained platform RBAC.
+- Any general tenant user-management UI (inviting additional users, editing/removing a user, password reset/change) - only the single atomic "create tenant + first owner" action is in scope. Everything else about tenant user management remains a manual DB operation, same as before this change.
 
 ## Decisions
 
@@ -40,12 +43,19 @@ Keeping both a public and an authenticated path to create a tenant would defeat 
 **Frontend: new isolated route group `apps/web/app/platform`, not a tab inside `/admin`.**
 `/admin`'s layout and `AdminNav` assume an authenticated tenant identity throughout (e.g. venue-scoped nav). A platform admin is never "inside" a tenant, so sharing that layout would mean threading a tenant-less special case through every admin page. A small dedicated layout (`/platform/login`, `/platform/tenants`) is simpler and keeps the two concerns visibly separate to anyone reading the codebase.
 
+**Tenant creation, its first user, and that user's `owner` role assignment are created in one request, inside the same transaction `POST /platform/organizations` already runs in - not a two-step "create tenant, then separately create its user" flow.**
+A two-step flow would just reintroduce, one level down, the exact gap this change closes for platform admins (create something, then have no way to act on it). Doing it atomically also means a failure partway through (e.g. a malformed email) leaves no orphaned Organization with no way to log into it. Extends `UserRepositoryPort`/`KyselyUserRepository` and `RoleAssignmentRepositoryPort`/`KyselyRoleAssignmentRepository` with `create` methods (see Context) rather than writing tenant-user-creation SQL inside the `platform` module - the `platform` module orchestrates, `identity`/`authorization` own their own tables, consistent with how `CreateOrganizationUseCase` is already reused as-is rather than reimplemented.
+
+**The owner's password is submitted as plaintext from the platform console's form to the backend, same as every other login/credential form in this codebase (`/auth/login`, `/platform/login` itself).**
+It travels over the same trusted Next.js server-action proxy path (`backendFetch`) already used everywhere else, and is hashed server-side with the existing `Argon2PasswordHasher` before it touches the database. No new transport pattern or risk introduced; a self-service invite-by-email flow (avoiding the platform admin ever seeing the tenant's password) is explicitly out of scope (see Non-Goals).
+
 ## Risks / Trade-offs
 
 - **[Two parallel auth systems to maintain]** → Deliberate and narrow: the new module only needs login/logout/session-check, mirroring `identity`'s existing shape closely enough that maintenance cost stays low.
 - **[Breaking seed scripts / e2e setup that call the public `POST /organizations`]** → Update `apps/backend/scripts/seed-storefront-test-tenant.ts` (and any e2e setup) as part of this change's tasks; covered by a task, not left dangling.
 - **[No UI for the first platform admin means someone must run a manual step post-deploy]** → Acceptable: this happens once per environment, not per tenant. Document the manual step (migration/seed script) in tasks.md.
 - **[Two cookies on the same domain]** → Both `httpOnly`, `sameSite: lax`, distinct names - no collision; each middleware reads only its own cookie name.
+- **[A single "new tenant" form now does three things: create Organization, create User, assign a role]** → Reuse the existing `fieldErrors` pattern already in `TenantsContent` (name/slug), extended to email/password, so a validation failure on any of the four fields is attributed to that specific field rather than a generic error.
 
 ## Migration Plan
 
@@ -54,7 +64,8 @@ Keeping both a public and an authenticated path to create a tenant would defeat 
 3. Add platform routes (`/platform/login`, `/platform/logout`, `GET/POST /platform/organizations`); register the router in `http/app.ts`.
 4. Remove the public `POST /organizations` route; update `organization.routes.ts` (`GET /organizations/:id` stays tenant-authenticated as-is).
 5. Update seed scripts that depended on the public creation route.
-6. Add `apps/web/app/platform/{login,tenants}` pages/actions.
+5b. Add `create` to `UserRepositoryPort`/`KyselyUserRepository` and `RoleAssignmentRepositoryPort`/`KyselyRoleAssignmentRepository`; add the use case that creates an Organization, its first User, and the `owner` role_assignment together; wire `POST /platform/organizations` to it.
+6. Add `apps/web/app/platform/{login,tenants}` pages/actions, with the tenant-creation form collecting the first owner's email/password alongside name/slug.
 7. Manually seed one `platform_admins` row per environment (documented step, not built UI) so there's a way in.
 
 No rollback complexity beyond a normal migration `down` (drop the two new tables) plus reverting the route change if needed.
