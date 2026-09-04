@@ -52,6 +52,6 @@
 
 ## 9. Verification
 
-- [ ] 9.1 Run the full path end-to-end manually: `/` search -> tenant with 1 venue -> merged page -> payment with buyer details -> success; and `/` search -> tenant with 2+ venues -> picker -> merged page -> payment -> success
-- [ ] 9.2 Verify the direct-link entry point still works: open `/loja/[tenantSlug]` (or a shared `/vitrine/...` link) without going through home search
+- [x] 9.1 Run the full path end-to-end manually: `/` search -> tenant with 1 venue -> merged page -> payment with buyer details -> success; and `/` search -> tenant with 2+ venues -> picker -> merged page -> payment -> success
+- [x] 9.2 Verify the direct-link entry point still works: open `/loja/[tenantSlug]` (or a shared `/vitrine/...` link) without going through home search
 - [x] 9.3 Run `openspec validate unify-storefront-navigation --strict` and the project's existing test suite; fix any failures before archiving
