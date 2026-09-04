@@ -139,7 +139,7 @@ export function OrderDetailContent({ order }: { order: OrderDetail }) {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Button
           variant="secondary"
           disabled={!canCancel}

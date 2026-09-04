@@ -148,15 +148,15 @@ export function ResourcesContent({
           <TableBody>
             {resources.map((resource) => (
               <TableRow key={resource.id}>
-                <TableCell>{resource.name}</TableCell>
-                <TableCell>{resource.defaultCapacity}</TableCell>
-                <TableCell>
+                <TableCell label="Nome">{resource.name}</TableCell>
+                <TableCell label="Capacidade padrão">{resource.defaultCapacity}</TableCell>
+                <TableCell label="Tipo">
                   <Badge variant={resource.hardCapacity ? "warning" : "neutral"}>
                     {resource.hardCapacity ? "Rígida" : "Flexível"}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button variant="secondary" type="button" onClick={() => setCapacityDialog(resource)}>
                       Definir capacidade
                     </Button>
