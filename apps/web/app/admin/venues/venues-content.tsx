@@ -70,9 +70,13 @@ export function VenuesContent({ venues }: { venues: Venue[] }) {
           <TableBody>
             {venues.map((venue) => (
               <TableRow key={venue.id}>
-                <TableCell className="font-mono text-xs">{venue.id}</TableCell>
-                <TableCell>{venue.name}</TableCell>
-                <TableCell className="font-mono text-xs">{venue.slug}</TableCell>
+                <TableCell label="ID" className="font-mono text-xs">
+                  {venue.id}
+                </TableCell>
+                <TableCell label="Nome">{venue.name}</TableCell>
+                <TableCell label="Slug" className="font-mono text-xs">
+                  {venue.slug}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -96,18 +96,20 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
           <TableBody>
             {orders.map((order) => (
               <TableRow key={order.id}>
-                <TableCell className="font-mono text-xs">
+                <TableCell label="ID" className="font-mono text-xs">
                   <Link href={`/admin/orders/${order.id}`} className="text-primary hover:underline">
                     {order.id}
                   </Link>
                 </TableCell>
-                <TableCell className="font-mono text-xs">{order.venueId}</TableCell>
-                <TableCell>
+                <TableCell label="Unidade" className="font-mono text-xs">
+                  {order.venueId}
+                </TableCell>
+                <TableCell label="Status">
                   <Badge variant={ORDER_STATUS_VARIANTS[order.status] ?? "neutral"}>
                     {ORDER_STATUS_LABELS[order.status] ?? order.status}
                   </Badge>
                 </TableCell>
-                <TableCell>R$ {(order.totalCents / 100).toFixed(2)}</TableCell>
+                <TableCell label="Total">R$ {(order.totalCents / 100).toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

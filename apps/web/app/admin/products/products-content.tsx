@@ -142,8 +142,8 @@ export function ProductsContent({
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.id}>
-                <TableCell>{product.name}</TableCell>
-                <TableCell>
+                <TableCell label="Nome">{product.name}</TableCell>
+                <TableCell label="Variantes">
                   <div className="flex flex-wrap gap-2">
                     {product.variants.map((variant) => (
                       <Badge key={variant.id} variant="neutral">
@@ -152,7 +152,7 @@ export function ProductsContent({
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell label="Canais">
                   {product.channels.length ? product.channels.join(", ") : "todos"}
                 </TableCell>
                 <TableCell>
@@ -188,7 +188,7 @@ export function ProductsContent({
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-fg">Variantes</span>
             {variantDrafts.map((draft, index) => (
-              <div key={index} className="flex gap-2">
+              <div key={index} className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   label="Nome da variante"
                   value={draft.name}
