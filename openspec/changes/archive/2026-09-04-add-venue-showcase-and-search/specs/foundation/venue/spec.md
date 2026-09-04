@@ -1,10 +1,4 @@
-# foundation/venue Specification
-
-## Purpose
-
-Represents a physical establishment (e.g. a zoo, a museum, a park) belonging to an Organization, and the anchor point later phases will attach capacity, catalog, and access-control data to.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Venue creation under an organization
 The system SHALL allow an authorized actor to create a Venue that belongs to exactly one Organization, with a unique, URL-safe slug within that Organization. A newly created Venue SHALL default to unpublished (`published = false`) with no profile fields set.
@@ -31,6 +25,8 @@ A Venue SHALL be readable and writable only by identities authorized within its 
 #### Scenario: Venue is isolated by tenant
 - **WHEN** a user from Organization A attempts to read or modify a Venue belonging to Organization B
 - **THEN** the system denies the operation
+
+## ADDED Requirements
 
 ### Requirement: Venue profile fields are owner-editable
 The system SHALL allow an authorized actor within a Venue's owning Organization to set and update that Venue's profile: `description`, `address`, `city`, `category` (each free text, optional), and `coverPhotoUrl` (optional, must be a well-formed URL when set).
