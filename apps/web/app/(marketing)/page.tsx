@@ -1,4 +1,5 @@
 import { Hero } from "@/components/marketing/hero";
+import { TenantSearch } from "@/components/marketing/tenant-search";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { Differentiator } from "@/components/marketing/differentiator";
 import { FAQ } from "@/components/marketing/faq";
@@ -14,6 +15,7 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
+      <TenantSearch />
       <HowItWorks />
       <Differentiator />
       <FAQ />

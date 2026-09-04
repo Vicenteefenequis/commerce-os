@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { submitCheckout } from "./actions";
+import type { CartPayload } from "../../../pay/checkout/cart-payload";
 
 export interface StorefrontVariant {
   id: string;
@@ -36,12 +36,13 @@ function formatCents(cents: number): string {
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Cart/buyer-details Client Component leaf (design.md - "client-rendered
- * where it's interactive"): holds transient quantity/buyer-detail state
- * with no server-side representation until POST /checkout. The visit date
- * and its per-variant `availability` come from the URL/Server Component
- * (design.md - M12.3), not client state, since availability is a server
- * read that depends on the date.
+ * Cart Client Component leaf (design.md - "client-rendered where it's
+ * interactive"): holds transient quantity state with no server-side
+ * representation until the buyer-details step at /pay/checkout creates the
+ * Order (design.md - "Order creation moves to the payment step"). The
+ * visit date and its per-variant `availability` come from the URL/Server
+ * Component (design.md - M12.3), not client state, since availability is a
+ * server read that depends on the date.
  */
 export function CheckoutCart({
   tenantId,
@@ -60,11 +61,19 @@ export function CheckoutCart({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [cart, setCart] = useState<Record<string, CartLine>>({});
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState<string>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const allVariants = useMemo(() => products.flatMap((product) => product.variants), [products]);
+  // spec: storefront/checkout - "Single-option cart defaults quantity and
+  // skips date selection": one ticket type, not tied to a bookable
+  // Resource (always available "today"), pre-selects quantity 1 and hides
+  // the date step.
+  const singleAlwaysAvailableVariant =
+    allVariants.length === 1 && !allVariants[0].resourceId ? allVariants[0] : undefined;
+
+  const [cart, setCart] = useState<Record<string, CartLine>>(() =>
+    singleAlwaysAvailableVariant ? { [singleAlwaysAvailableVariant.id]: { quantity: 1 } } : {},
+  );
 
   const variantsById = useMemo(() => {
     const map = new Map<string, { product: StorefrontProduct; variant: StorefrontVariant }>();
@@ -106,23 +115,17 @@ export function CheckoutCart({
     });
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     setError(undefined);
 
     if (selectedLines.length === 0) {
       setError("Selecione ao menos um item.");
       return;
     }
-    if (!email || !name) {
-      setError("Informe seu nome e e-mail.");
-      return;
-    }
 
-    setIsSubmitting(true);
-    const result = await submitCheckout({
+    const cartPayload: CartPayload = {
       tenantId,
       venueId,
-      customer: { email, name },
       lines: selectedLines.map(([variantId, line]) => {
         const entry = variantsById.get(variantId);
         return {
@@ -131,14 +134,14 @@ export function CheckoutCart({
           period: entry?.variant.resourceId ? visitDate : undefined,
         };
       }),
-    });
-    setIsSubmitting(false);
+      summary: selectedLines.map(([variantId, line]) => {
+        const entry = variantsById.get(variantId);
+        return { name: entry?.variant.name ?? "", quantity: line.quantity, priceCents: entry?.variant.priceCents ?? 0 };
+      }),
+      totalCents,
+    };
 
-    if (result.error || !result.orderId) {
-      setError(result.error ?? "Não foi possível concluir a compra");
-      return;
-    }
-    router.push(`/pay/${result.orderId}?tenantId=${encodeURIComponent(tenantId)}`);
+    router.push(`/pay/checkout?cart=${encodeURIComponent(JSON.stringify(cartPayload))}`);
   }
 
   if (products.length === 0) {
@@ -151,16 +154,18 @@ export function CheckoutCart({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader title="Data da visita" />
-        <Input
-          key={visitDate}
-          label="Data"
-          type="date"
-          defaultValue={visitDate}
-          onChange={(e) => handleDateChange(e.target.value)}
-        />
-      </Card>
+      {!singleAlwaysAvailableVariant && (
+        <Card>
+          <CardHeader title="Data da visita" />
+          <Input
+            key={visitDate}
+            label="Data"
+            type="date"
+            defaultValue={visitDate}
+            onChange={(e) => handleDateChange(e.target.value)}
+          />
+        </Card>
+      )}
 
       {products.map((product) => (
         <Card key={product.id}>
@@ -218,40 +223,38 @@ export function CheckoutCart({
         </Card>
       ))}
 
-      <Card>
-        <CardHeader title="Seus dados" />
-        <div className="flex flex-col gap-4">
-          <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Resumo do pedido" />
-        <div className="flex flex-col gap-2">
-          {selectedLines.length === 0 && <p className="text-sm text-fg-muted">Nenhum item selecionado.</p>}
-          {selectedLines.map(([variantId, line]) => {
-            const entry = variantsById.get(variantId);
-            if (!entry) return null;
-            return (
-              <div key={variantId} className="flex justify-between text-sm text-fg">
-                <span>
-                  {entry.variant.name} x{line.quantity}
-                </span>
-                <span>{formatCents(entry.variant.priceCents * line.quantity)}</span>
-              </div>
-            );
-          })}
-          <div className="mt-2 flex justify-between border-t border-border pt-2 text-sm font-semibold text-fg">
-            <span>Total</span>
-            <span>{formatCents(totalCents)}</span>
+      {/* spec: storefront/checkout - "Storefront checkout shows a clear
+          order summary before payment": items, quantity, and running total
+          live in a footer fixed to the bottom of the viewport. */}
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface px-4 py-3 shadow-lg">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2">
+          {selectedLines.length === 0 ? (
+            <p className="text-sm text-fg-muted">Nenhum item selecionado.</p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {selectedLines.map(([variantId, line]) => {
+                const entry = variantsById.get(variantId);
+                if (!entry) return null;
+                return (
+                  <div key={variantId} className="flex justify-between text-xs text-fg-muted">
+                    <span>
+                      {entry.variant.name} x{line.quantity}
+                    </span>
+                    <span>{formatCents(entry.variant.priceCents * line.quantity)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-semibold text-fg">Total: {formatCents(totalCents)}</span>
+            <Button onClick={handleSubmit} disabled={selectedLines.length === 0}>
+              Ir para pagamento
+            </Button>
           </div>
         </div>
-        {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-        <Button className="mt-4 w-full" onClick={handleSubmit} isLoading={isSubmitting}>
-          Ir para pagamento
-        </Button>
-      </Card>
+      </div>
     </div>
   );
 }
