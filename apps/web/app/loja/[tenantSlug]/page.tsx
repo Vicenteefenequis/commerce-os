@@ -1,19 +1,25 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { backendUrl } from "@/lib/backend-url";
 import { Card, CardHeader } from "@/components/ui/card";
+import { StoreIcon } from "@/components/icons/store-icon";
 
 interface Venue {
   id: string;
   slug: string;
   name: string;
+  category: string | null;
+  address: string | null;
+  city: string | null;
+  coverPhotoUrl: string | null;
 }
 
 /**
  * Public, account-less tenant storefront entry point (spec:
- * storefront/tenant-entry). Lands a shared tenant link somewhere: skips
- * straight to the venue when there's only one, otherwise lists venues to
- * pick from.
+ * storefront/tenant-entry). Lands a shared tenant link, or a tenant search
+ * result, somewhere: skips straight to the venue when there's only one,
+ * otherwise lists venues (as photo/address/category cards) to pick from.
  */
 export default async function TenantEntryPage({
   params,
@@ -67,14 +73,38 @@ export default async function TenantEntryPage({
           title={organizationName ?? "Escolha onde comprar"}
           description="Escolha o local onde você quer comprar seu ingresso."
         />
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {venues.map((venue) => (
             <Link
               key={venue.id}
               href={`/loja/${tenantSlug}/${venue.slug}`}
-              className="rounded-md border border-border p-4 text-sm font-medium text-fg hover:bg-bg-subtle"
+              className="overflow-hidden rounded-lg border border-border bg-surface transition-colors hover:border-border-strong"
             >
-              {venue.name}
+              <div className="relative aspect-video w-full bg-bg-subtle">
+                {venue.coverPhotoUrl ? (
+                  <Image
+                    src={venue.coverPhotoUrl}
+                    alt={venue.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <StoreIcon className="h-10 w-10 text-fg-muted" />
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h2 className="text-base font-semibold text-fg">{venue.name}</h2>
+                {(venue.category || venue.address || venue.city) && (
+                  <p className="mt-1 text-sm text-fg-muted">
+                    {[venue.category, [venue.address, venue.city].filter(Boolean).join(", ")]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
             </Link>
           ))}
         </div>

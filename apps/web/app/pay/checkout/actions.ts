@@ -1,21 +1,16 @@
 "use server";
 
 import { backendUrl } from "@/lib/backend-url";
+import type { CartLine } from "./cart-payload";
 
-export interface CheckoutLineInput {
-  variantId: string;
-  quantity: number;
-  period?: string;
-}
-
-export interface SubmitCheckoutInput {
+export interface CreateOrderInput {
   tenantId: string;
   venueId: string;
-  lines: CheckoutLineInput[];
+  lines: CartLine[];
   customer: { email: string; name: string };
 }
 
-export interface SubmitCheckoutResult {
+export interface CreateOrderResult {
   orderId?: string;
   error?: string;
 }
@@ -24,8 +19,15 @@ export interface SubmitCheckoutResult {
  * Write (creates + submits an Order) - Server Action per
  * nextjs-frontend-conventions. Guest customer, no session to forward:
  * tenantId travels in the body, same as the payment page's actions.ts.
+ *
+ * spec: storefront/checkout - "Storefront checkout hands off to the
+ * existing payment page"; payments/payment - "Payment page collects buyer
+ * identification before payment". The Order (and its Customer) is created
+ * here, only once both the cart selection and buyer details are known -
+ * not at cart-submit time (design.md - "Order creation moves to the
+ * payment step").
  */
-export async function submitCheckout(input: SubmitCheckoutInput): Promise<SubmitCheckoutResult> {
+export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const checkoutResponse = await fetch(backendUrl("/checkout"), {
     method: "POST",
     headers: { "content-type": "application/json" },

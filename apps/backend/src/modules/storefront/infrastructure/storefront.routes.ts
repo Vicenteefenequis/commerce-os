@@ -4,7 +4,7 @@ import {
   getStorefrontTenantController,
   getStorefrontVariantAvailabilityController,
   getStorefrontVenueProfileController,
-  listDiscoverableVenuesController,
+  listDiscoverableTenantsController,
   listStorefrontProductsController,
   listStorefrontVenuesController,
 } from "./storefront.controller.js";
@@ -45,7 +45,7 @@ storefrontRouter.get(
  * NOT tenant-scoped"). No tenant in the path at all, unlike every other
  * storefront route.
  */
-storefrontRouter.get("/storefront/discovery/venues", txRoutePublic(listDiscoverableVenuesController));
+storefrontRouter.get("/storefront/discovery/tenants", txRoutePublic(listDiscoverableTenantsController));
 
 storefrontRouter.get(
   "/storefront/tenants/:tenantSlug/venues/:venueSlug/variants/:variantId/availability",

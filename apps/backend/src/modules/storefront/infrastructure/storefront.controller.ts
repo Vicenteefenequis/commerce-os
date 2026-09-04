@@ -20,7 +20,7 @@ import {
   VariantNotFoundError,
 } from "../application/get-storefront-variant-availability.usecase.js";
 import { GetStorefrontVenueProfileUseCase } from "../application/get-storefront-venue-profile.usecase.js";
-import { ListDiscoverableVenuesUseCase } from "../application/list-discoverable-venues.usecase.js";
+import { ListDiscoverableTenantsUseCase } from "../application/list-discoverable-tenants.usecase.js";
 
 export async function getStorefrontTenantController(req: Request, trx: Trx): Promise<TxResult> {
   const { tenantSlug } = req.params as { tenantSlug: string };
@@ -59,7 +59,15 @@ export async function listStorefrontVenuesController(req: Request, trx: Trx): Pr
         tenantId: tenant.id,
         tenantSlug: tenant.slug,
         organizationName: tenant.name,
-        venues: venues.map((venue) => ({ id: venue.id, slug: venue.slug, name: venue.name })),
+        venues: venues.map((venue) => ({
+          id: venue.id,
+          slug: venue.slug,
+          name: venue.name,
+          category: venue.category,
+          address: venue.address,
+          city: venue.city,
+          coverPhotoUrl: venue.coverPhotoUrl,
+        })),
       },
     };
   } catch (err) {
@@ -142,18 +150,18 @@ export async function getStorefrontVenueProfileController(req: Request, trx: Trx
   }
 }
 
-export async function listDiscoverableVenuesController(req: Request, trx: Trx): Promise<TxResult> {
-  const { city, category } = req.query as { city?: string; category?: string };
+export async function listDiscoverableTenantsController(req: Request, trx: Trx): Promise<TxResult> {
+  const { q } = req.query as { q?: string };
 
-  const useCase = new ListDiscoverableVenuesUseCase(
+  const useCase = new ListDiscoverableTenantsUseCase(
     new KyselyOrganizationRepository(trx),
     new KyselyVenueRepository(trx),
     new KyselyProductRepository(trx),
     new KyselyTenantContext(trx),
   );
 
-  const venues = await useCase.execute({ city, category });
-  return { status: 200, body: { venues } };
+  const tenants = await useCase.execute({ q });
+  return { status: 200, body: { tenants } };
 }
 
 export async function getStorefrontVariantAvailabilityController(req: Request, trx: Trx): Promise<TxResult> {
