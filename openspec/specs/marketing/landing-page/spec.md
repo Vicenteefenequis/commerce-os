@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Gives prospective pilot establishments (zoos, aquariums, museums, parks, tourist attractions with limited-capacity operations) a public, unauthenticated entry point that explains the platform's value and captures their interest before the transactional MVP exists.
+Gives prospective establishments (zoos, aquariums, museums, parks, tourist attractions with limited-capacity operations) a public, unauthenticated entry point that explains the platform's functionality and differentiation, and captures their interest.
 
 ## Requirements
 

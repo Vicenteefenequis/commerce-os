@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persists interest submitted through the landing page CTA so the business can follow up with prospective pilot establishments, without requiring any of the transactional MVP capabilities to exist first.
+Persists interest submitted through the landing page CTA so the business can follow up with prospective establishments, independent of which transactional capabilities are already live.
 
 ## Requirements
 
