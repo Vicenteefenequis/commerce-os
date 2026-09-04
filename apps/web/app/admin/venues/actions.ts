@@ -23,3 +23,37 @@ export async function createVenue(formData: FormData): Promise<CreateVenueAction
   revalidatePath("/admin/venues");
   return {};
 }
+
+export interface UpdateVenueActionResult {
+  error?: string;
+  field?: "coverPhotoUrl";
+}
+
+/** spec: foundation/venue - "Venue profile fields are owner-editable", "Venue publish toggle is owner-controlled". */
+export async function updateVenue(venueId: string, formData: FormData): Promise<UpdateVenueActionResult> {
+  const response = await backendFetch(`/venues/${venueId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      description: emptyToNull(formData.get("description")),
+      address: emptyToNull(formData.get("address")),
+      city: emptyToNull(formData.get("city")),
+      category: emptyToNull(formData.get("category")),
+      coverPhotoUrl: emptyToNull(formData.get("coverPhotoUrl")),
+      published: formData.get("published") === "on",
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const error: string = body.error ?? "Falha ao salvar unidade";
+    return { error, field: error.toLowerCase().includes("url") ? "coverPhotoUrl" : undefined };
+  }
+
+  revalidatePath("/admin/venues");
+  return {};
+}
+
+function emptyToNull(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+  return value;
+}

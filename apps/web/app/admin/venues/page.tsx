@@ -7,6 +7,12 @@ interface Venue {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  category: string | null;
+  coverPhotoUrl: string | null;
+  published: boolean;
 }
 
 export default async function VenuesPage() {

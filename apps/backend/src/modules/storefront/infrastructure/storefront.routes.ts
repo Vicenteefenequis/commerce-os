@@ -3,6 +3,8 @@ import { txRoutePublic } from "../../../http/tx-route.js";
 import {
   getStorefrontTenantController,
   getStorefrontVariantAvailabilityController,
+  getStorefrontVenueProfileController,
+  listDiscoverableVenuesController,
   listStorefrontProductsController,
   listStorefrontVenuesController,
 } from "./storefront.controller.js";
@@ -30,6 +32,20 @@ storefrontRouter.get(
   "/storefront/tenants/:tenantSlug/venues/:venueSlug/products",
   txRoutePublic(listStorefrontProductsController),
 );
+
+/** spec: storefront/showcase - public venue profile, independent of `published`. */
+storefrontRouter.get(
+  "/storefront/tenants/:tenantSlug/venues/:venueSlug/profile",
+  txRoutePublic(getStorefrontVenueProfileController),
+);
+
+/**
+ * spec: storefront/discovery - the platform's first cross-tenant public
+ * read (design.md - "Discovery is the first storefront capability that is
+ * NOT tenant-scoped"). No tenant in the path at all, unlike every other
+ * storefront route.
+ */
+storefrontRouter.get("/storefront/discovery/venues", txRoutePublic(listDiscoverableVenuesController));
 
 storefrontRouter.get(
   "/storefront/tenants/:tenantSlug/venues/:venueSlug/variants/:variantId/availability",

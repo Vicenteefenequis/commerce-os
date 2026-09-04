@@ -15,6 +15,12 @@ export interface VenuesTable {
   tenant_id: string;
   name: string;
   slug: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  category: string | null;
+  cover_photo_url: string | null;
+  published: Generated<boolean>;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }

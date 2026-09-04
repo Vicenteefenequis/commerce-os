@@ -8,6 +8,7 @@ import {
   VenueSlugAlreadyExistsError,
 } from "../application/create-venue.usecase.js";
 import { ListVenuesUseCase } from "../application/list-venues.usecase.js";
+import { UpdateVenueUseCase, VenueNotFoundError } from "../application/update-venue.usecase.js";
 import { InvalidVenueError } from "../domain/venue.entity.js";
 import { KyselyVenueRepository } from "./venue-repository.kysely.js";
 
@@ -51,6 +52,64 @@ export async function listVenuesController(req: Request, trx: Trx): Promise<TxRe
 
   return {
     status: 200,
-    body: { venues: venues.map((venue) => ({ id: venue.id, name: venue.name, slug: venue.slug })) },
+    body: {
+      venues: venues.map((venue) => ({
+        id: venue.id,
+        name: venue.name,
+        slug: venue.slug,
+        description: venue.description,
+        address: venue.address,
+        city: venue.city,
+        category: venue.category,
+        coverPhotoUrl: venue.coverPhotoUrl,
+        published: venue.published,
+      })),
+    },
   };
+}
+
+export async function updateVenueController(req: Request, trx: Trx): Promise<TxResult> {
+  const identity = req.identity;
+  if (!identity) return { status: 401, body: { error: "authentication required" } };
+
+  const { id } = req.params as { id: string };
+  const { description, address, city, category, coverPhotoUrl, published } = req.body as {
+    description?: string | null;
+    address?: string | null;
+    city?: string | null;
+    category?: string | null;
+    coverPhotoUrl?: string | null;
+    published?: boolean;
+  };
+
+  const useCase = new UpdateVenueUseCase(new KyselyVenueRepository(trx));
+
+  try {
+    const venue = await useCase.execute(identity.tenantId, id, {
+      description,
+      address,
+      city,
+      category,
+      coverPhotoUrl,
+      published,
+    });
+    return {
+      status: 200,
+      body: {
+        id: venue.id,
+        name: venue.name,
+        slug: venue.slug,
+        description: venue.description,
+        address: venue.address,
+        city: venue.city,
+        category: venue.category,
+        coverPhotoUrl: venue.coverPhotoUrl,
+        published: venue.published,
+      },
+    };
+  } catch (err) {
+    if (err instanceof InvalidVenueError) return { status: 400, body: { error: err.message } };
+    if (err instanceof VenueNotFoundError) return { status: 404, body: { error: err.message } };
+    throw err;
+  }
 }
