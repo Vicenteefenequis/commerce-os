@@ -1,0 +1,112 @@
+/*
+ * Storefront (consumer-facing, /loja/...) token layer (design.md D1).
+ * Deliberately isolated from apps/web/app/globals.css's admin/marketing
+ * tokens: every raw custom property here is prefixed `--sf-` and scoped to
+ * the `.storefront-theme` class (applied by app/loja/layout.tsx), never to
+ * `:root`. Outside that scope the `--sf-*` variables are simply undefined,
+ * so admin/marketing pages are unaffected by this file's rules existing in
+ * the shared stylesheet, and a change to admin's tokens can never bleed
+ * into the storefront.
+ *
+ * Corrected from the original plan (design.md D1), which assumed this file
+ * could stand alone as its own Tailwind entry, imported only from
+ * app/loja/layout.tsx: Tailwind v4's utility generation (the classes
+ * `@theme` below produces, e.g. `bg-sf-accent`) only runs for a CSS file
+ * that is part of the same build as `@import "tailwindcss"`. This file is
+ * therefore `@import`ed from app/globals.css (which already does that
+ * import), rather than loaded as an independent stylesheet. Isolation is
+ * preserved by scoping - not by file boundary: the raw `--sf-*` tokens
+ * below live under `.storefront-theme`, not `:root`, so the generated
+ * utilities have no effect anywhere that class isn't applied.
+ *
+ * Palette values are taken directly from the "Golden Path Tenants" design
+ * (Claude Design project "Golden path: descoberta até acesso").
+ */
+
+.storefront-theme {
+  /* Color: surfaces (darkest to lightest) */
+  --sf-color-bg: #07091c;
+  --sf-color-bg-subtle: #090c22;
+  --sf-color-surface: #0a0e27;
+  --sf-color-surface-raised: #101736;
+  --sf-color-surface-strong: #0c1130;
+
+  /* Color: borders */
+  --sf-color-border: #212a5a;
+  --sf-color-border-strong: #2e3873;
+
+  /* Color: accent (brand orange) */
+  --sf-color-accent: #ff7a2f;
+  --sf-color-accent-hover: #ffa061;
+  --sf-color-on-accent: #170900;
+
+  /* Color: text */
+  --sf-color-fg: #f4f5fb;
+  --sf-color-fg-muted: #a6afd4;
+  --sf-color-fg-subtle: #7c87b8;
+
+  /* Color: semantic (capacity bands, design.md D4) */
+  --sf-color-success: #6be0a0;
+  --sf-color-warning: #ffa061;
+  --sf-color-danger: #ff3d3d;
+  --sf-color-sold-out: #3a4585;
+
+  /* Typography */
+  --sf-font-sans: var(--sf-font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --sf-font-mono: var(--sf-font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Radius */
+  --sf-radius-sm: 8px;
+  --sf-radius-md: 14px;
+  --sf-radius-lg: 18px;
+  --sf-radius-xl: 22px;
+  --sf-radius-2xl: 46px;
+  --sf-radius-pill: 999px;
+
+  background-color: var(--sf-color-bg);
+  color: var(--sf-color-fg);
+  font-family: var(--sf-font-sans);
+  min-height: 100%;
+}
+
+/*
+ * Tailwind-facing theme mapping (mirrors globals.css's `@theme inline`
+ * pattern, design.md D2): makes bg-sf-*, text-sf-*, rounded-sf-*, etc.
+ * available as utilities, each referencing the scoped raw token above via
+ * `inline` substitution - so the generated utility has no effect outside
+ * `.storefront-theme`, since the variable it reads is undefined there.
+ */
+@theme inline {
+  --color-sf-bg: var(--sf-color-bg);
+  --color-sf-bg-subtle: var(--sf-color-bg-subtle);
+  --color-sf-surface: var(--sf-color-surface);
+  --color-sf-surface-raised: var(--sf-color-surface-raised);
+  --color-sf-surface-strong: var(--sf-color-surface-strong);
+
+  --color-sf-border: var(--sf-color-border);
+  --color-sf-border-strong: var(--sf-color-border-strong);
+
+  --color-sf-accent: var(--sf-color-accent);
+  --color-sf-accent-hover: var(--sf-color-accent-hover);
+  --color-sf-on-accent: var(--sf-color-on-accent);
+
+  --color-sf-fg: var(--sf-color-fg);
+  --color-sf-fg-muted: var(--sf-color-fg-muted);
+  --color-sf-fg-subtle: var(--sf-color-fg-subtle);
+
+  --color-sf-success: var(--sf-color-success);
+  --color-sf-warning: var(--sf-color-warning);
+  --color-sf-danger: var(--sf-color-danger);
+  --color-sf-sold-out: var(--sf-color-sold-out);
+
+  --font-sf-sans: var(--sf-font-sans);
+  --font-sf-mono: var(--sf-font-mono);
+
+  --radius-sf-sm: var(--sf-radius-sm);
+  --radius-sf-md: var(--sf-radius-md);
+  --radius-sf-lg: var(--sf-radius-lg);
+  --radius-sf-xl: var(--sf-radius-xl);
+  --radius-sf-2xl: var(--sf-radius-2xl);
+  --radius-sf-pill: var(--sf-radius-pill);
+}
