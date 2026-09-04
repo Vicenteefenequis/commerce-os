@@ -19,6 +19,8 @@ import {
   GetStorefrontVariantAvailabilityUseCase,
   VariantNotFoundError,
 } from "../application/get-storefront-variant-availability.usecase.js";
+import { GetStorefrontVenueProfileUseCase } from "../application/get-storefront-venue-profile.usecase.js";
+import { ListDiscoverableVenuesUseCase } from "../application/list-discoverable-venues.usecase.js";
 
 export async function getStorefrontTenantController(req: Request, trx: Trx): Promise<TxResult> {
   const { tenantSlug } = req.params as { tenantSlug: string };
@@ -105,6 +107,53 @@ export async function listStorefrontProductsController(req: Request, trx: Trx): 
     }
     throw err;
   }
+}
+
+export async function getStorefrontVenueProfileController(req: Request, trx: Trx): Promise<TxResult> {
+  const { tenantSlug, venueSlug } = req.params as { tenantSlug: string; venueSlug: string };
+
+  const useCase = new GetStorefrontVenueProfileUseCase(
+    new KyselyOrganizationRepository(trx),
+    new KyselyVenueRepository(trx),
+    new KyselyTenantContext(trx),
+  );
+
+  try {
+    const { tenant, venue } = await useCase.execute(tenantSlug, venueSlug);
+    return {
+      status: 200,
+      body: {
+        tenantSlug: tenant.slug,
+        organizationName: tenant.name,
+        venueSlug: venue.slug,
+        venueName: venue.name,
+        description: venue.description,
+        address: venue.address,
+        city: venue.city,
+        category: venue.category,
+        coverPhotoUrl: venue.coverPhotoUrl,
+      },
+    };
+  } catch (err) {
+    if (err instanceof TenantNotFoundError || err instanceof VenueNotFoundError) {
+      return { status: 404, body: { error: err.message } };
+    }
+    throw err;
+  }
+}
+
+export async function listDiscoverableVenuesController(req: Request, trx: Trx): Promise<TxResult> {
+  const { city, category } = req.query as { city?: string; category?: string };
+
+  const useCase = new ListDiscoverableVenuesUseCase(
+    new KyselyOrganizationRepository(trx),
+    new KyselyVenueRepository(trx),
+    new KyselyProductRepository(trx),
+    new KyselyTenantContext(trx),
+  );
+
+  const venues = await useCase.execute({ city, category });
+  return { status: 200, body: { venues } };
 }
 
 export async function getStorefrontVariantAvailabilityController(req: Request, trx: Trx): Promise<TxResult> {

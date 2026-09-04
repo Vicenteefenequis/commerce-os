@@ -25,6 +25,9 @@ class FakeOrganizationRepository implements OrganizationRepositoryPort {
   async findBySlug(slug: string): Promise<Organization | null> {
     return this.bySlug.get(slug) ?? null;
   }
+  async listAll(): Promise<Organization[]> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeEventPublisher implements EventPublisherPort {

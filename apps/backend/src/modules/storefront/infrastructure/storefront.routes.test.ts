@@ -220,4 +220,164 @@ describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () =>
 
     expect(res.status).toBe(404);
   });
+
+  it("GET .../profile returns the venue's showcase profile regardless of published status", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Vitrine");
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db
+      .updateTable("venues")
+      .set({
+        description: "Um zoológico",
+        city: "São Paulo",
+        category: "Parque",
+        cover_photo_url: "https://example.com/photo.jpg",
+        published: false,
+      })
+      .where("id", "=", venueId)
+      .execute();
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/profile`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      tenantSlug,
+      venueSlug,
+      description: "Um zoológico",
+      city: "São Paulo",
+      category: "Parque",
+      coverPhotoUrl: "https://example.com/photo.jpg",
+    });
+  });
+
+  it("GET .../profile omits unset profile fields as null rather than erroring", async () => {
+    const { tenantSlug, venueSlug } = await seedTenantWithVenue("Zoo Vitrine Vazia");
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/profile`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ description: null, city: null, category: null, coverPhotoUrl: null });
+  });
+
+  it("GET .../profile 404s for an unknown tenant slug", async () => {
+    const app = createApp();
+    const res = await request(app).get("/storefront/tenants/does-not-exist/venues/does-not-exist/profile");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET .../profile 404s for a venue slug that does not belong to the tenant", async () => {
+    const { tenantSlug } = await seedTenantWithVenue("Zoo Vitrine Sem Venue");
+    const other = await seedTenantWithVenue("Zoo Vitrine Outro");
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${other.venueSlug}/profile`);
+
+    expect(res.status).toBe(404);
+  });
+
+  async function seedDiscoverableVenue(
+    orgName: string,
+    overrides: { published?: boolean; coverPhotoUrl?: string | null; city?: string; category?: string } = {},
+    withActiveProduct = true,
+  ) {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue(orgName);
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db
+      .updateTable("venues")
+      .set({
+        published: overrides.published ?? true,
+        cover_photo_url: overrides.coverPhotoUrl === undefined ? "https://example.com/photo.jpg" : overrides.coverPhotoUrl,
+        city: overrides.city ?? "São Paulo",
+        category: overrides.category ?? "Bar",
+      })
+      .where("id", "=", venueId)
+      .execute();
+    if (withActiveProduct) {
+      await seedProduct(tenantId, venueId, { channels: [] });
+    }
+    return { tenantId, tenantSlug, venueId, venueSlug };
+  }
+
+  // Fan-out over every Organization (design.md - "Discovery reads by
+  // fanning out per-tenant"): this suite's long-lived shared dev database
+  // accumulates Organizations across every run, so these can legitimately
+  // take longer than the default timeout - not a regression.
+  it("GET /storefront/discovery/venues returns eligible venues across tenants", async () => {
+    const a = await seedDiscoverableVenue("Zoo Discovery A");
+    const b = await seedDiscoverableVenue("Zoo Discovery B");
+
+    const app = createApp();
+    const res = await request(app).get("/storefront/discovery/venues");
+
+    expect(res.status).toBe(200);
+    const slugs = res.body.venues.map((v: { venueSlug: string }) => v.venueSlug);
+    expect(slugs).toContain(a.venueSlug);
+    expect(slugs).toContain(b.venueSlug);
+  }, 20000);
+
+  it("GET /storefront/discovery/venues excludes unpublished venues, venues without a cover photo, and venues without an active product", async () => {
+    const unpublished = await seedDiscoverableVenue("Zoo Discovery Unpublished", { published: false });
+    const noPhoto = await seedDiscoverableVenue("Zoo Discovery No Photo", { coverPhotoUrl: null });
+    const noProduct = await seedDiscoverableVenue("Zoo Discovery No Product", {}, false);
+
+    const app = createApp();
+    const res = await request(app).get("/storefront/discovery/venues");
+
+    expect(res.status).toBe(200);
+    const slugs = res.body.venues.map((v: { venueSlug: string }) => v.venueSlug);
+    expect(slugs).not.toContain(unpublished.venueSlug);
+    expect(slugs).not.toContain(noPhoto.venueSlug);
+    expect(slugs).not.toContain(noProduct.venueSlug);
+  }, 20000);
+
+  it("GET /storefront/discovery/venues filters by city and category, combined", async () => {
+    // Unique per run (not a fixed "Curitiba"/"Teatro" value): this suite
+    // reuses a long-lived dev database across runs, so a fixed value would
+    // accumulate matches from earlier runs and break exact-list assertions.
+    const uniqueCity = `Curitiba-${randomUUID()}`;
+    const uniqueCategory = `Teatro-${randomUUID()}`;
+    const match = await seedDiscoverableVenue("Zoo Discovery Match", {
+      city: uniqueCity,
+      category: uniqueCategory,
+    });
+    const wrongCity = await seedDiscoverableVenue("Zoo Discovery Wrong City", {
+      city: "Recife",
+      category: uniqueCategory,
+    });
+    const wrongCategory = await seedDiscoverableVenue("Zoo Discovery Wrong Category", {
+      city: uniqueCity,
+      category: "Bar",
+    });
+
+    const app = createApp();
+    const res = await request(app).get(
+      `/storefront/discovery/venues?city=${encodeURIComponent(uniqueCity)}&category=${encodeURIComponent(uniqueCategory)}`,
+    );
+
+    expect(res.status).toBe(200);
+    const slugs = res.body.venues.map((v: { venueSlug: string }) => v.venueSlug);
+    expect(slugs).toEqual([match.venueSlug]);
+    expect(slugs).not.toContain(wrongCity.venueSlug);
+    expect(slugs).not.toContain(wrongCategory.venueSlug);
+  }, 20000);
+
+  it("GET /storefront/discovery/venues returns an empty result when no venue matches, without error", async () => {
+    const app = createApp();
+    const res = await request(app).get("/storefront/discovery/venues?city=Município Inexistente");
+
+    expect(res.status).toBe(200);
+    expect(res.body.venues).toEqual([]);
+  }, 20000);
+
+  it("GET /storefront/discovery/venues links each result to its showcase page via tenant/venue slugs", async () => {
+    const venue = await seedDiscoverableVenue("Zoo Discovery Link");
+
+    const app = createApp();
+    const res = await request(app).get("/storefront/discovery/venues");
+
+    const result = res.body.venues.find((v: { venueSlug: string }) => v.venueSlug === venue.venueSlug);
+    expect(result).toMatchObject({ tenantSlug: venue.tenantSlug, venueSlug: venue.venueSlug });
+  }, 20000);
 });

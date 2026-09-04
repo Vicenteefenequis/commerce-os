@@ -24,6 +24,9 @@ class FakeVenueRepository implements VenueRepositoryPort {
   async findBySlug(): Promise<Venue | null> {
     throw new Error("not used in this test");
   }
+  async update(): Promise<Venue | null> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeResourceRepository implements ResourceRepositoryPort {

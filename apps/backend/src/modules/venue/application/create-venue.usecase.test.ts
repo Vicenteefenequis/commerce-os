@@ -22,6 +22,9 @@ class FakeOrganizationRepository implements OrganizationRepositoryPort {
   async findBySlug(): Promise<Organization | null> {
     throw new Error("not used in this test");
   }
+  async listAll(): Promise<Organization[]> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeVenueRepository implements VenueRepositoryPort {
@@ -39,6 +42,9 @@ class FakeVenueRepository implements VenueRepositoryPort {
   }
   async findBySlug(tenantId: string, slug: string): Promise<Venue | null> {
     return this.created.find((v) => v.tenantId === tenantId && v.slug === slug) ?? null;
+  }
+  async update(): Promise<Venue | null> {
+    throw new Error("not used in this test");
   }
 }
 

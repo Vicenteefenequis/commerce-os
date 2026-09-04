@@ -31,4 +31,9 @@ export class KyselyOrganizationRepository implements OrganizationRepositoryPort 
       .executeTakeFirst();
     return row ? Organization.create({ id: row.id, name: row.name, slug: row.slug }) : null;
   }
+
+  async listAll(): Promise<Organization[]> {
+    const rows = await this.trx.selectFrom("organizations").selectAll().execute();
+    return rows.map((row) => Organization.create({ id: row.id, name: row.name, slug: row.slug }));
+  }
 }
