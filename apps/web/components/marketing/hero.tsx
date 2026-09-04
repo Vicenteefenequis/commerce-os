@@ -9,7 +9,7 @@ export function Hero() {
         </h1>
         <p className="max-w-xl text-lg text-fg-muted">
           Zoológicos, aquários, museus, parques e atrações turísticas vendem, reservam, cobram e controlam acesso
-          hoje espalhados entre WhatsApp, planilhas e sistemas desconectados. O Commerce OS reúne tudo isso em uma
+          hoje espalhados entre WhatsApp, planilhas e sistemas desconectados. O Ingressafluxo reúne tudo isso em uma
           única plataforma.
         </p>
         <div>

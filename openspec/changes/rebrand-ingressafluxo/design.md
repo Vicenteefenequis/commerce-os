@@ -51,7 +51,7 @@ export function Logo({ className }: { className?: string }) {
 Alternative considered: keep the reference's literal hardcoded colors (`#fff` for dark surfaces, `#0B1030` for light surfaces) as two icon variants. Rejected — `currentColor` collapses this to one implementation, and the component already lives inside text-colored contexts (`text-fg`) on every current call site, so `currentColor` resolves correctly without a variant prop.
 
 ### D2: Favicon generation
-Export the same icon geometry as a static SVG (`apps/web/app/favicon.svg` using Next.js App Router's automatic favicon convention — a file literally named `favicon.ico`/`favicon.svg` in `app/` is picked up with no metadata wiring). Use a flat `#E4772A` fill/stroke (no `currentColor`, since a favicon has no surrounding text color to inherit) on a transparent background. No build step or third-party favicon generator is introduced.
+Export the same icon geometry as a static SVG (`apps/web/app/icon.svg`, using Next.js App Router's automatic icon convention — a file literally named `icon.(svg|png|...)` in `app/` is picked up with no metadata wiring; `favicon` as a special name is reserved for `.ico` specifically). Use a flat `#E4772A` fill/stroke (no `currentColor`, since a favicon has no surrounding text color to inherit) on a transparent background. No build step or third-party favicon generator is introduced.
 
 Alternative considered: hand-author a multi-size `.ico`. Rejected — Next's `app/favicon.svg`/`app/icon.svg` convention is sufficient for all evergreen browsers this product targets, and avoids a binary asset generation step.
 

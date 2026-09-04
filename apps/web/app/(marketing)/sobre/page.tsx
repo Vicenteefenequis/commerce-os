@@ -1,15 +1,15 @@
 export const metadata = {
-  title: "Sobre — Commerce OS",
-  description: "Conheça a visão e a tese por trás do Commerce OS.",
+  title: "Sobre — Ingressafluxo",
+  description: "Conheça a visão e a tese por trás do Ingressafluxo.",
 };
 
 export default function SobrePage() {
   return (
     <section className="mx-auto max-w-3xl px-6 py-20">
-      <h1 className="mb-6 text-3xl font-semibold text-fg">Sobre o Commerce OS</h1>
+      <h1 className="mb-6 text-3xl font-semibold text-fg">Sobre o Ingressafluxo</h1>
       <div className="flex flex-col gap-6 text-fg-muted">
         <p>
-          O Commerce OS é uma plataforma de infraestrutura operacional e comercial para negócios presenciais que
+          O Ingressafluxo é uma plataforma de infraestrutura operacional e comercial para negócios presenciais que
           precisam vender, reservar, cobrar, controlar capacidade, validar acesso e manter relacionamento recorrente
           com seus clientes.
         </p>
