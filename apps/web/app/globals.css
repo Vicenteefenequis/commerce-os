@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./loja/theme.css";
 
 /*
  * Raw design tokens (design.md D2): the single source of truth every
