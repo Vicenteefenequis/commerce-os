@@ -5,7 +5,7 @@ import { FAQ } from "@/components/marketing/faq";
 import { CtaSection } from "@/components/marketing/cta-section";
 
 export const metadata = {
-  title: "Commerce OS — Venda e controle acesso em negócios presenciais",
+  title: "Ingressafluxo — Venda e controle acesso em negócios presenciais",
   description:
     "A infraestrutura de vendas, capacidade e acesso para negócios presenciais com capacidade limitada: zoológicos, aquários, museus, parques e atrações turísticas.",
 };

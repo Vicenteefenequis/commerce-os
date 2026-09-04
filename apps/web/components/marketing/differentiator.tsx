@@ -2,7 +2,7 @@ const POINTS = [
   {
     title: "Não é só ticketing",
     description:
-      "A maior parte dos sistemas emite ingressos. O Commerce OS controla a transação inteira e o contexto operacional: quem comprou, quando, quanto pagou, se compareceu e quando deve comprar de novo.",
+      "A maior parte dos sistemas emite ingressos. O Ingressafluxo controla a transação inteira e o contexto operacional: quem comprou, quando, quanto pagou, se compareceu e quando deve comprar de novo.",
   },
   {
     title: "Capacidade como fonte única da verdade",

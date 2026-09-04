@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 
 interface NavLink {
   href: string;
@@ -43,7 +44,7 @@ export function AdminNavClient({
   return (
     <nav className="border-b border-border">
       <div className="flex items-center gap-4 px-4 py-4 sm:px-8">
-        <span className="text-sm font-semibold text-fg">Commerce OS</span>
+        <Logo className="text-fg" />
 
         <div className="hidden flex-1 items-center gap-4 md:flex">
           <div className="flex flex-wrap gap-3">

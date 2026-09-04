@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-bg/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
-        <Link href="/" className="text-sm font-semibold text-fg">
-          Commerce OS
+        <Link href="/" className="text-fg">
+          <Logo />
         </Link>
         <nav className="ml-auto flex items-center gap-6 text-sm">
           <Link href="/sobre" className="text-fg-muted hover:text-fg">

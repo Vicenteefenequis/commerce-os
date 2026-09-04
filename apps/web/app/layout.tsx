@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata = {
-  title: "Commerce OS",
-  description: "Commerce OS",
+  title: "Ingressafluxo",
+  description: "Ingressafluxo",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
