@@ -27,19 +27,26 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-16">
-      <div className="mb-10 flex flex-col gap-3">
-        <h2 className="text-2xl font-semibold text-fg">Como funciona</h2>
-        <p className="max-w-2xl text-fg-muted">
+    <section id="como-funciona" className="mx-auto max-w-6xl px-6 py-24">
+      <div className="mb-11 flex flex-col gap-3.5 max-w-xl">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-primary-600">
+          Como funciona
+        </span>
+        <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-fg">
+          Do cadastro da oferta até o visitante entrando
+        </h2>
+        <p className="text-lg leading-relaxed text-fg-muted">
           Do cadastro da oferta até o visitante entrando no seu estabelecimento, tudo em um único fluxo.
         </p>
       </div>
-      <ol className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {STEPS.map((step, index) => (
-          <li key={step.title} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-6">
-            <span className="text-sm font-semibold text-primary">{String(index + 1).padStart(2, "0")}</span>
-            <h3 className="font-semibold text-fg">{step.title}</h3>
-            <p className="text-sm text-fg-muted">{step.description}</p>
+          <li key={step.title} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-7">
+            <span className="font-mono text-xs font-medium text-primary-600">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <h3 className="text-lg font-bold tracking-tight text-fg">{step.title}</h3>
+            <p className="text-[15px] leading-relaxed text-fg-muted">{step.description}</p>
           </li>
         ))}
       </ol>

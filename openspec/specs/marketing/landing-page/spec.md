@@ -29,11 +29,22 @@ The landing page SHALL present, in order: a Hero section with a primary call-to-
 - **THEN** the page displays a Hero section, a Como Funciona section, a Diferencial section, a FAQ section, and a final CTA section, in that order
 
 ### Requirement: Hero section shows an animated platform flow mockup
-The Hero section SHALL include an animation depicting a simplified mockup of the platform flow (offer creation through checkout, ticket/QR issuance, and access granted), alongside a headline, subheadline, and a primary CTA.
+The Hero section SHALL include a visual mockup depicting the platform's capability — a sales overview panel (with a chart and key metrics) and an access-check/"Portaria" panel — alongside a headline, subheadline, and a primary CTA. The mockup SHALL communicate what the platform does today, not a step-by-step "future flow" walkthrough.
 
 #### Scenario: Hero animation is present
 - **WHEN** a visitor views the Hero section
-- **THEN** the section displays a headline, a subheadline, the flow animation, and a primary CTA control
+- **THEN** the section displays a headline, a subheadline, the capability mockup, and a primary CTA control
+
+### Requirement: Landing copy presents functionality and differentiation, not pilot/exploratory framing
+Visible landing page copy (badges, headings, CTAs, FAQ answers) SHALL NOT describe the platform as a pilot program, a work-in-progress MVP, or otherwise frame visitors as testers being recruited. Copy SHALL instead describe what the platform does and why it differs from standalone ticketing systems.
+
+#### Scenario: No pilot/MVP language is visible
+- **WHEN** a visitor reads any section of the landing page (hero badge, header CTA, hero CTA, final CTA section, FAQ)
+- **THEN** no text uses "piloto," "programa piloto," or "MVP" to describe the platform's maturity or the visitor's role
+
+#### Scenario: FAQ answers describe current capability
+- **WHEN** a visitor reads the FAQ answer about production readiness
+- **THEN** the answer describes what the platform does today (offers, capacity, checkout, ticket/QR issuance) without referring to a pilot phase
 
 ### Requirement: Diferencial section communicates the product's positioning
 The Diferencial section SHALL communicate that the platform controls the full transaction and its operational context (not just ticket issuance), that capacity is a single source of truth, and that the platform is modular, API-first, and multi-tenant.

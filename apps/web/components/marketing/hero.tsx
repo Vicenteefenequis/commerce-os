@@ -1,28 +1,39 @@
-import { HeroFlowAnimation } from "./hero-flow-animation";
+import { HeroPreview } from "./hero-preview";
 
 export function Hero() {
   return (
-    <section className="mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-16 pt-20 lg:flex-row lg:items-center lg:pt-28">
-      <div className="flex flex-1 flex-col gap-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
+    <section className="marketing-section-glow-top relative overflow-hidden px-6 py-24 sm:py-28">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[12.5px] text-neutral-0/80">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+          Infraestrutura de vendas para atrações e turismo
+        </span>
+        <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-neutral-0 sm:text-5xl">
           A infraestrutura de vendas para negócios presenciais com capacidade limitada
         </h1>
-        <p className="max-w-xl text-lg text-fg-muted">
+        <p className="max-w-xl text-lg leading-relaxed text-neutral-0/70">
           Zoológicos, aquários, museus, parques e atrações turísticas vendem, reservam, cobram e controlam acesso
           hoje espalhados entre WhatsApp, planilhas e sistemas desconectados. O Ingressafluxo reúne tudo isso em uma
           única plataforma.
         </p>
-        <div>
+        <div className="flex gap-3 pt-1">
           <a
             href="#cta"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-fg-on-primary hover:bg-primary-hover active:bg-primary-active"
+            className="btn-primary-gradient rounded-full px-7 py-3.5 text-[15.5px] font-bold shadow-[0_14px_34px_rgba(194,96,15,.35)]"
           >
-            Quero ser piloto
+            Começar agora
+          </a>
+          <a
+            href="#como-funciona"
+            className="rounded-full border border-white/15 bg-white/[0.07] px-7 py-3.5 text-[15.5px] font-semibold text-neutral-0 hover:bg-white/[0.14]"
+          >
+            Ver como funciona
           </a>
         </div>
-      </div>
-      <div className="flex-1">
-        <HeroFlowAnimation />
+
+        <div className="mt-8 flex w-full justify-center">
+          <HeroPreview />
+        </div>
       </div>
     </section>
   );

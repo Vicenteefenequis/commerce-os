@@ -71,7 +71,7 @@ export function LeadForm({ id }: { id?: string }) {
       />
       {error && <p className="text-sm text-danger">{error}</p>}
       <Button type="submit" isLoading={status === "submitting"}>
-        Quero ser piloto
+        Começar agora
       </Button>
     </form>
   );

@@ -23,8 +23,7 @@ export default function SobrePage() {
           estabelecimento, consumidor e transação gere mais valor para os demais participantes do ecossistema.
         </p>
         <p>
-          Hoje estamos construindo o MVP e selecionando os primeiros estabelecimentos piloto. Se isso faz sentido
-          para o seu negócio, entre em contato pela página inicial.
+          Se isso faz sentido para o seu negócio, entre em contato pela página inicial.
         </p>
       </div>
     </section>
