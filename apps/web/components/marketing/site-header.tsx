@@ -15,11 +15,8 @@ export function MarketingHeader() {
           <Link href="/admin/login" className="text-fg-muted hover:text-fg">
             Área do parceiro
           </Link>
-          <Link
-            href="#cta"
-            className="rounded-md bg-primary px-3 py-1.5 font-medium text-fg-on-primary hover:bg-primary-hover"
-          >
-            Quero ser piloto
+          <Link href="#cta" className="btn-primary-gradient rounded-full px-4 py-2 font-semibold">
+            Começar agora
           </Link>
         </nav>
       </div>

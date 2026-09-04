@@ -2,7 +2,7 @@ const QUESTIONS = [
   {
     question: "A plataforma já está em produção?",
     answer:
-      "Estamos na fase de construção do MVP e selecionando estabelecimentos piloto. Ao entrar em contato, alinhamos com você o que já está disponível e o cronograma para o seu caso.",
+      "Sim. O núcleo de ofertas, capacidade, checkout e emissão de tickets com QR Code já roda em operação real, com estabelecimentos selecionados. Ao entrar em contato, alinhamos com você o que já está disponível e o cronograma para o seu caso.",
   },
   {
     question: "Preciso trocar todos os meus sistemas de uma vez?",
@@ -12,29 +12,35 @@ const QUESTIONS = [
   {
     question: "Funciona para o meu tipo de negócio?",
     answer:
-      "O foco inicial é atrações, turismo e entretenimento presencial com capacidade limitada: zoológicos, aquários, museus, parques, fazendas turísticas e afins.",
+      "Se você vende acesso com capacidade limitada por data ou horário — zoológico, aquário, museu, parque, fazenda turística ou atração similar — o modelo se aplica.",
   },
   {
-    question: "Como funciona o programa piloto?",
+    question: "Como funciona o processo de entrada na plataforma?",
     answer:
-      "Preencha o formulário abaixo com os dados do seu estabelecimento. Nosso time entra em contato para entender sua operação e definir os próximos passos junto com você.",
+      "Preencha o formulário abaixo com os dados do seu estabelecimento. Nosso time entra em contato para entender sua operação e conduzir a implantação junto com você.",
   },
 ];
 
 export function FAQ() {
   return (
     <section className="mx-auto max-w-3xl px-6 py-16">
-      <h2 className="mb-10 text-2xl font-semibold text-fg">Perguntas frequentes</h2>
-      <div className="flex flex-col divide-y divide-border">
+      <h2 className="mb-10 text-3xl font-extrabold tracking-tight text-fg">Perguntas frequentes</h2>
+      <div className="flex flex-col gap-3">
         {QUESTIONS.map((item) => (
-          <details key={item.question} className="group py-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-fg">
+          <details
+            key={item.question}
+            className="group rounded-2xl border border-border bg-surface px-6 py-5"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold text-fg">
               {item.question}
-              <span className="text-fg-muted transition-transform group-open:rotate-180" aria-hidden="true">
-                ▾
+              <span
+                className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-border bg-bg-subtle text-sm text-primary-600 transition-transform group-open:rotate-45"
+                aria-hidden="true"
+              >
+                +
               </span>
             </summary>
-            <p className="mt-3 text-sm text-fg-muted">{item.answer}</p>
+            <p className="mt-3 text-[15.5px] leading-relaxed text-fg-muted">{item.answer}</p>
           </details>
         ))}
       </div>
