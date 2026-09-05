@@ -1,13 +1,29 @@
 import type { Request } from "express";
 import type { Trx, TxResult } from "../../../http/tx-route.js";
 import { ListOrderTicketsUseCase } from "../application/list-order-tickets.usecase.js";
+import type { TicketWithDisplayContext } from "../application/list-order-tickets.usecase.js";
 import { renderTicketQrCodePng } from "./render-ticket-qrcode.js";
 import { KyselyEntitlementRepository } from "./entitlement-repository.kysely.js";
 import { KyselyTicketRepository } from "./ticket-repository.kysely.js";
-import type { Ticket } from "../domain/ticket.entity.js";
+import { KyselyReservationValidityLookup } from "./reservation-validity-lookup.kysely.js";
+import { KyselyOrderRepository } from "../../commerce/infrastructure/order-repository.kysely.js";
+import { KyselyOrganizationRepository } from "../../organization/infrastructure/organization-repository.kysely.js";
+import { KyselyProductRepository } from "../../catalog/infrastructure/product-repository.kysely.js";
+import { KyselyCustomerRepository } from "../../customer/infrastructure/customer-repository.kysely.js";
 
-function serializeTicket(ticket: Ticket) {
-  return { id: ticket.id, code: ticket.code };
+function serializeTicket(context: TicketWithDisplayContext) {
+  const base = {
+    id: context.ticket.id,
+    code: context.ticket.code,
+    organizationName: context.organizationName,
+    organizationSlug: context.organizationSlug,
+    offerName: context.offerName,
+    loteName: context.loteName,
+    buyerName: context.buyerName,
+  };
+  return context.validity
+    ? { ...base, validity: { start: context.validity.start.toISOString(), end: context.validity.end.toISOString() } }
+    : base;
 }
 
 /**
@@ -25,7 +41,15 @@ export async function listOrderTicketsController(req: Request, trx: Trx): Promis
 
   if (!tenantId) return { status: 400, body: { error: "tenantId is required" } };
 
-  const useCase = new ListOrderTicketsUseCase(new KyselyEntitlementRepository(trx), new KyselyTicketRepository(trx));
+  const useCase = new ListOrderTicketsUseCase(
+    new KyselyEntitlementRepository(trx),
+    new KyselyTicketRepository(trx),
+    new KyselyOrderRepository(trx),
+    new KyselyOrganizationRepository(trx),
+    new KyselyProductRepository(trx),
+    new KyselyCustomerRepository(trx),
+    new KyselyReservationValidityLookup(trx),
+  );
   const tickets = await useCase.execute({ tenantId, orderId });
   return { status: 200, body: { tickets: tickets.map(serializeTicket) } };
 }

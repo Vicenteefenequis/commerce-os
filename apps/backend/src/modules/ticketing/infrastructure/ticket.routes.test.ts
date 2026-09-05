@@ -120,6 +120,24 @@ describe.skipIf(!dbReachable)("GET /orders/:orderId/tickets (live Postgres)", ()
     expect(res.body.tickets.map((t: { code: string }) => t.code).sort()).toEqual([...seed.ticketCodes].sort());
   });
 
+  it("includes tenant, offer, lote, and buyer display context, and omits validity when not Reservation-backed", async () => {
+    const seed = await seedOrderWithTickets("Zoo Tickets Contexto", ["code-contexto"]);
+
+    const res = await request(createApp()).get(`/orders/${seed.orderId}/tickets`).query({ tenantId: seed.tenantId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.tickets).toHaveLength(1);
+    const [ticket] = res.body.tickets as Array<Record<string, unknown>>;
+    expect(ticket).toMatchObject({
+      organizationName: "Zoo Tickets Contexto",
+      organizationSlug: seed.tenantId,
+      offerName: "Ingresso",
+      loteName: "Ingresso",
+      buyerName: "Ana",
+    });
+    expect(ticket.validity).toBeUndefined();
+  });
+
   it("returns an empty list for a tenant that does not own the Order", async () => {
     const seed = await seedOrderWithTickets("Zoo Tickets Tenant Errado", ["code-tenant-a"]);
 

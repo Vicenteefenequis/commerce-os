@@ -135,14 +135,14 @@ export function PayForm({ orderId, tenantId }: { orderId: string; tenantId: stri
 
   if (phase === "succeeded") {
     return (
-      <Card>
-        <CardHeader title={STATUS_LABEL.succeeded} />
+      <div className="flex flex-col gap-4">
+        <p className="text-center text-sm font-medium text-fg">{STATUS_LABEL.succeeded}</p>
         {tickets === undefined ? (
-          <p className="text-sm text-fg-muted">Carregando ingressos...</p>
+          <p className="text-center text-sm text-fg-muted">Carregando ingressos...</p>
         ) : (
           <TicketViewer tickets={tickets} tenantId={tenantId} />
         )}
-      </Card>
+      </div>
     );
   }
 
