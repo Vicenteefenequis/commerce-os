@@ -10,6 +10,7 @@ export interface VenueProfile {
   latitude?: number | null;
   /** Valid range: [-180, 180]. */
   longitude?: number | null;
+  ageRestriction?: number | null;
 }
 
 export interface VenueProps extends VenueProfile {
@@ -58,6 +59,9 @@ export class Venue {
     ) {
       throw new InvalidVenueError("longitude must be between -180 and 180");
     }
+    if (props.ageRestriction != null && props.ageRestriction < 0) {
+      throw new InvalidVenueError("ageRestriction must be non-negative");
+    }
     return new Venue({ ...props, published: props.published ?? false });
   }
 
@@ -95,6 +99,10 @@ export class Venue {
 
   get coverPhotoUrl(): string | null {
     return this.props.coverPhotoUrl ?? null;
+  }
+
+  get ageRestriction(): number | null {
+    return this.props.ageRestriction ?? null;
   }
 
   get published(): boolean {

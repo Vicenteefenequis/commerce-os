@@ -16,7 +16,7 @@ The system SHALL allow an unauthenticated request to list a tenant's Venues, ide
 - **THEN** the system returns a not-found result and no Venue data
 
 ### Requirement: Storefront product listing respects channel visibility and availability window
-The system SHALL allow an unauthenticated request to list a Venue's Products, identified by the tenant's slug and the venue's slug, returning only Products that are visible on the `storefront` channel and available at the current time, with their variants and current prices.
+The system SHALL allow an unauthenticated request to list a Venue's Products, identified by the tenant's slug and the venue's slug, returning only Products that are visible on the `storefront` channel and available at the current time, with their variants, current prices, and — for each Product with at least one resource-backed variant — an aggregate capacity percentage computed from those variants' Resources.
 
 #### Scenario: Visible, available product is listed
 - **WHEN** an unauthenticated request lists a Venue's Products, identified by tenant slug and venue slug
@@ -33,6 +33,14 @@ The system SHALL allow an unauthenticated request to list a Venue's Products, id
 #### Scenario: Unknown venue slug returns not found
 - **WHEN** an unauthenticated request lists Products for a venue slug that does not match any Venue of the tenant identified by the tenant slug
 - **THEN** the system returns a not-found result and no Product data
+
+#### Scenario: Product with resource-backed variants includes an aggregate capacity figure
+- **WHEN** the storefront product listing includes a Product with one or more variants that reference a Resource
+- **THEN** the response includes an aggregate capacity percentage for that Product, computed from those variants' Resources using the same calculation as `capacity/resource`
+
+#### Scenario: Product without resource-backed variants omits the capacity figure
+- **WHEN** a listed Product has no variant referencing a Resource
+- **THEN** the response omits the aggregate capacity figure for that Product rather than showing zero
 
 ### Requirement: Storefront availability lookup is public
 The system SHALL allow an unauthenticated request to look up available capacity for a resource-backed variant and period, identified by the tenant's slug and the venue's slug, using the same calculation the rest of the system relies on to prevent overbooking.

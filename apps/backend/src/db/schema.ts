@@ -21,6 +21,7 @@ export interface VenuesTable {
   city: string | null;
   category: string | null;
   cover_photo_url: string | null;
+  age_restriction: number | null;
   published: Generated<boolean>;
   latitude: number | null;
   longitude: number | null;

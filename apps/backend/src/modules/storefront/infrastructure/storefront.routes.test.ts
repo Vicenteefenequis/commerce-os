@@ -171,6 +171,22 @@ describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () =>
     expect(returned.variants[0]).toMatchObject({ name: "Único", priceCents: 2500 });
   });
 
+  it("GET .../products includes an aggregate capacity figure for a product with resource-backed variants, and omits it otherwise (spec: storefront/catalog - aggregate capacity figure)", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Capacidade Agregada");
+    const resourceId = await seedResource(tenantId, venueId, 40);
+    const constrained = await seedProduct(tenantId, venueId, { resourceId });
+    const unconstrained = await seedProduct(tenantId, venueId, { resourceId: null });
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/products`);
+
+    expect(res.status).toBe(200);
+    const constrainedProduct = res.body.products.find((p: { id: string }) => p.id === constrained.productId);
+    const unconstrainedProduct = res.body.products.find((p: { id: string }) => p.id === unconstrained.productId);
+    expect(constrainedProduct).toMatchObject({ capacityPercentFull: 0 });
+    expect(unconstrainedProduct.capacityPercentFull).toBeUndefined();
+  });
+
   it("GET /storefront/tenants/:tenantSlug/venues/:venueSlug/products 404s for a venue slug that does not belong to the tenant", async () => {
     const { tenantSlug } = await seedTenantWithVenue("Zoo Sem Venue");
     const other = await seedTenantWithVenue("Zoo Outro");
@@ -257,7 +273,34 @@ describe.skipIf(!dbReachable)("storefront catalog routes (live Postgres)", () =>
     const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/profile`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ description: null, city: null, category: null, coverPhotoUrl: null });
+    expect(res.body).toMatchObject({
+      description: null,
+      city: null,
+      category: null,
+      coverPhotoUrl: null,
+      ageRestriction: null,
+    });
+  });
+
+  it("GET .../profile includes the count of currently-available offers and their combined remaining capacity (spec: storefront/showcase - Profile stat tiles summarize active offers)", async () => {
+    const { tenantId, tenantSlug, venueId, venueSlug } = await seedTenantWithVenue("Zoo Vitrine Ofertas");
+    const resourceA = await seedResource(tenantId, venueId, 40);
+    const resourceB = await seedResource(tenantId, venueId, 10);
+    await seedProduct(tenantId, venueId, { resourceId: resourceA });
+    await seedProduct(tenantId, venueId, { resourceId: resourceB });
+    await seedProduct(tenantId, venueId, { resourceId: null });
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db
+      .updateTable("venues")
+      .set({ age_restriction: 18 })
+      .where("id", "=", venueId)
+      .execute();
+
+    const app = createApp();
+    const res = await request(app).get(`/storefront/tenants/${tenantSlug}/venues/${venueSlug}/profile`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ activeOfferCount: 3, remainingCapacity: 50, ageRestriction: 18 });
   });
 
   it("GET .../profile 404s for an unknown tenant slug", async () => {

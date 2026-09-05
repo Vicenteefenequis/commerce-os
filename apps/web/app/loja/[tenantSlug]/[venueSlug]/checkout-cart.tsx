@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { CartPayload } from "../../../pay/checkout/cart-payload";
+import { formatCents } from "./format";
 
 export interface StorefrontVariant {
   id: string;
@@ -18,6 +19,10 @@ export interface StorefrontProduct {
   id: string;
   name: string;
   variants: StorefrontVariant[];
+  /** Aggregate capacity across resource-backed variants, omitted otherwise (spec: storefront/catalog). */
+  capacityPercentFull?: number;
+  /** The offer's own dated availability window start, when set (design.md D1). */
+  availableFrom?: string | null;
 }
 
 export interface VariantAvailability {
@@ -27,10 +32,6 @@ export interface VariantAvailability {
 
 interface CartLine {
   quantity: number;
-}
-
-function formatCents(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -168,7 +169,7 @@ export function CheckoutCart({
       )}
 
       {products.map((product) => (
-        <Card key={product.id}>
+        <Card key={product.id} id={`offer-${product.id}`}>
           <CardHeader
             title={product.name}
             description={

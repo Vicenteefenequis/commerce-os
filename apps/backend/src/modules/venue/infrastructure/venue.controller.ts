@@ -75,17 +75,27 @@ export async function updateVenueController(req: Request, trx: Trx): Promise<TxR
   if (!identity) return { status: 401, body: { error: "authentication required" } };
 
   const { id } = req.params as { id: string };
-  const { description, address, city, category, coverPhotoUrl, published, latitude, longitude } =
-    req.body as {
-      description?: string | null;
-      address?: string | null;
-      city?: string | null;
-      category?: string | null;
-      coverPhotoUrl?: string | null;
-      published?: boolean;
-      latitude?: number | null;
-      longitude?: number | null;
-    };
+  const {
+    description,
+    address,
+    city,
+    category,
+    coverPhotoUrl,
+    ageRestriction,
+    published,
+    latitude,
+    longitude,
+  } = req.body as {
+    description?: string | null;
+    address?: string | null;
+    city?: string | null;
+    category?: string | null;
+    coverPhotoUrl?: string | null;
+    ageRestriction?: number | null;
+    published?: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
 
   const useCase = new UpdateVenueUseCase(new KyselyVenueRepository(trx));
 
@@ -96,6 +106,7 @@ export async function updateVenueController(req: Request, trx: Trx): Promise<TxR
       city,
       category,
       coverPhotoUrl,
+      ageRestriction,
       published,
       latitude,
       longitude,
@@ -111,6 +122,7 @@ export async function updateVenueController(req: Request, trx: Trx): Promise<TxR
         city: venue.city,
         category: venue.category,
         coverPhotoUrl: venue.coverPhotoUrl,
+        ageRestriction: venue.ageRestriction,
         published: venue.published,
         latitude: venue.latitude,
         longitude: venue.longitude,
