@@ -159,6 +159,39 @@ describe.skipIf(!dbReachable)("Platform admin console (live Postgres)", () => {
     expect(orgs).toHaveLength(0);
   });
 
+  it("verifies an organization as platform admin (spec: foundation/organization - Organization verification is platform-admin-controlled)", async () => {
+    const { id: adminId } = await seedPlatformAdmin("secret123");
+    const cookie = await seedPlatformSessionCookie(adminId);
+    const app = createApp();
+
+    const orgId = randomUUID();
+    await db
+      .insertInto("organizations")
+      .values({ id: orgId, name: "Tenant a Verificar", slug: `tenant-verificar-${orgId.slice(0, 8)}` })
+      .execute();
+
+    const res = await request(app)
+      .patch(`/platform/organizations/${orgId}/verified`)
+      .set("Cookie", cookie)
+      .send({ verified: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.verified).toBe(true);
+
+    const row = await db.selectFrom("organizations").selectAll().where("id", "=", orgId).executeTakeFirstOrThrow();
+    expect(row.verified).toBe(true);
+  });
+
+  it("denies verifying an organization without a platform session", async () => {
+    const app = createApp();
+
+    const res = await request(app)
+      .patch(`/platform/organizations/${randomUUID()}/verified`)
+      .send({ verified: true });
+
+    expect(res.status).toBe(401);
+  });
+
   it("keeps a platform session and a tenant session independent", async () => {
     const { id: adminId } = await seedPlatformAdmin("secret123");
     const platformCookie = await seedPlatformSessionCookie(adminId);

@@ -6,6 +6,10 @@ export interface VenueProfile {
   city?: string | null;
   category?: string | null;
   coverPhotoUrl?: string | null;
+  /** Owner-editable location (spec: foundation/venue - "Venue location coordinates are owner-editable"). Valid range: [-90, 90]. */
+  latitude?: number | null;
+  /** Valid range: [-180, 180]. */
+  longitude?: number | null;
 }
 
 export interface VenueProps extends VenueProfile {
@@ -39,6 +43,20 @@ export class Venue {
     }
     if (props.coverPhotoUrl && !isWellFormedUrl(props.coverPhotoUrl)) {
       throw new InvalidVenueError("coverPhotoUrl must be a well-formed URL");
+    }
+    if (
+      props.latitude !== undefined &&
+      props.latitude !== null &&
+      (props.latitude < -90 || props.latitude > 90)
+    ) {
+      throw new InvalidVenueError("latitude must be between -90 and 90");
+    }
+    if (
+      props.longitude !== undefined &&
+      props.longitude !== null &&
+      (props.longitude < -180 || props.longitude > 180)
+    ) {
+      throw new InvalidVenueError("longitude must be between -180 and 180");
     }
     return new Venue({ ...props, published: props.published ?? false });
   }
@@ -81,5 +99,13 @@ export class Venue {
 
   get published(): boolean {
     return this.props.published ?? false;
+  }
+
+  get latitude(): number | null {
+    return this.props.latitude ?? null;
+  }
+
+  get longitude(): number | null {
+    return this.props.longitude ?? null;
   }
 }

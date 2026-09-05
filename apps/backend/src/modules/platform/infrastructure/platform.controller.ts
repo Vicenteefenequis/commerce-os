@@ -24,6 +24,10 @@ import {
 import { KyselyTenantContext } from "./tenant-context.kysely.js";
 import { Organization } from "../../organization/domain/organization.entity.js";
 import { KyselyOrganizationRepository } from "../../organization/infrastructure/organization-repository.kysely.js";
+import {
+  OrganizationNotFoundError,
+  SetOrganizationVerifiedUseCase,
+} from "../../organization/application/set-organization-verified.usecase.js";
 import { KyselyUserRepository } from "../../identity/infrastructure/user-repository.kysely.js";
 import { KyselyRoleAssignmentRepository } from "../../authorization/infrastructure/role-assignment-repository.kysely.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
@@ -126,9 +130,43 @@ export async function listOrganizationsController(_req: Request, trx: Trx): Prom
     status: 200,
     body: {
       organizations: organizations.map((row) => {
-        const organization = Organization.create({ id: row.id, name: row.name, slug: row.slug });
-        return { id: organization.id, name: organization.name, slug: organization.slug };
+        const organization = Organization.create({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          verified: row.verified,
+        });
+        return {
+          id: organization.id,
+          name: organization.name,
+          slug: organization.slug,
+          verified: organization.verified,
+        };
       }),
     },
   };
+}
+
+export async function setOrganizationVerifiedController(req: Request, trx: Trx): Promise<TxResult> {
+  const { id } = req.params as { id: string };
+  const { verified } = req.body as { verified?: boolean };
+
+  if (typeof verified !== "boolean") {
+    return { status: 400, body: { error: "verified must be a boolean" } };
+  }
+
+  const useCase = new SetOrganizationVerifiedUseCase(new KyselyOrganizationRepository(trx));
+
+  try {
+    const organization = await useCase.execute(id, verified);
+    return {
+      status: 200,
+      body: { id: organization.id, name: organization.name, slug: organization.slug, verified: organization.verified },
+    };
+  } catch (err) {
+    if (err instanceof OrganizationNotFoundError) {
+      return { status: 404, body: { error: err.message } };
+    }
+    throw err;
+  }
 }

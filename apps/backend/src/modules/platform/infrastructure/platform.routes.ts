@@ -6,6 +6,7 @@ import {
   listOrganizationsController,
   platformLoginController,
   platformLogoutController,
+  setOrganizationVerifiedController,
 } from "./platform.controller.js";
 
 export const platformRouter = Router();
@@ -22,4 +23,9 @@ platformRouter.post(
   "/platform/organizations",
   requirePlatformAuth,
   txRoutePublic(createTenantWithOwnerController),
+);
+platformRouter.patch(
+  "/platform/organizations/:id/verified",
+  requirePlatformAuth,
+  txRoutePublic(setOrganizationVerifiedController),
 );
