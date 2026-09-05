@@ -12,4 +12,10 @@ export interface OrganizationRepositoryPort {
    * since no single query can read more than one tenant's rows under RLS.
    */
   listAll(): Promise<Organization[]>;
+  /**
+   * Platform-admin-only write (spec: foundation/organization - "Organization
+   * verification is platform-admin-controlled"). Returns null when no
+   * Organization matches the id.
+   */
+  setVerified(id: string, verified: boolean): Promise<Organization | null>;
 }

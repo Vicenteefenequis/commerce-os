@@ -21,6 +21,9 @@ class FakeOrganizationRepository implements OrganizationRepositoryPort {
   async listAll(): Promise<Organization[]> {
     throw new Error("not used in this test");
   }
+  async setVerified(): Promise<Organization | null> {
+    throw new Error("not used in this test");
+  }
 }
 
 class FakeVenueRepository implements VenueRepositoryPort {

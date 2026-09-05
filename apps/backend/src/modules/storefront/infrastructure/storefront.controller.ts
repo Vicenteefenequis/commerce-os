@@ -20,7 +20,10 @@ import {
   VariantNotFoundError,
 } from "../application/get-storefront-variant-availability.usecase.js";
 import { GetStorefrontVenueProfileUseCase } from "../application/get-storefront-venue-profile.usecase.js";
-import { ListDiscoverableTenantsUseCase } from "../application/list-discoverable-tenants.usecase.js";
+import {
+  type AvailabilityFilter,
+  ListDiscoverableTenantsUseCase,
+} from "../application/list-discoverable-tenants.usecase.js";
 
 export async function getStorefrontTenantController(req: Request, trx: Trx): Promise<TxResult> {
   const { tenantSlug } = req.params as { tenantSlug: string };
@@ -151,17 +154,34 @@ export async function getStorefrontVenueProfileController(req: Request, trx: Trx
 }
 
 export async function listDiscoverableTenantsController(req: Request, trx: Trx): Promise<TxResult> {
-  const { q } = req.query as { q?: string };
+  const { q, category, when, availability, maxPriceCents, lat, lng } = req.query as {
+    q?: string;
+    category?: string;
+    when?: string;
+    availability?: AvailabilityFilter;
+    maxPriceCents?: string;
+    lat?: string;
+    lng?: string;
+  };
 
   const useCase = new ListDiscoverableTenantsUseCase(
     new KyselyOrganizationRepository(trx),
     new KyselyVenueRepository(trx),
     new KyselyProductRepository(trx),
+    new KyselyCapacityPeriodRepository(trx),
     new KyselyTenantContext(trx),
   );
 
-  const tenants = await useCase.execute({ q });
-  return { status: 200, body: { tenants } };
+  const result = await useCase.execute({
+    q,
+    category,
+    when,
+    availability,
+    maxPriceCents: maxPriceCents !== undefined ? Number(maxPriceCents) : undefined,
+    lat: lat !== undefined ? Number(lat) : undefined,
+    lng: lng !== undefined ? Number(lng) : undefined,
+  });
+  return { status: 200, body: result };
 }
 
 export async function getStorefrontVariantAvailabilityController(req: Request, trx: Trx): Promise<TxResult> {

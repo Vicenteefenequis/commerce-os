@@ -36,3 +36,21 @@ export async function createTenant(formData: FormData): Promise<CreateTenantActi
   revalidatePath("/platform/tenants");
   return {};
 }
+
+export async function setOrganizationVerified(
+  organizationId: string,
+  verified: boolean,
+): Promise<{ error?: string }> {
+  const response = await backendFetch(`/platform/organizations/${organizationId}/verified`, {
+    method: "PATCH",
+    body: JSON.stringify({ verified }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    return { error: body.error ?? "Falha ao atualizar verificação" };
+  }
+
+  revalidatePath("/platform/tenants");
+  return {};
+}

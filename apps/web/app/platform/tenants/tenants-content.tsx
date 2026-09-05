@@ -3,17 +3,44 @@
 import { useState, type FormEvent } from "react";
 import { ListPageLayout } from "@/components/layout/list-page-layout";
 import { FormPageLayout } from "@/components/layout/form-page-layout";
+import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { slugify } from "@/lib/slug";
-import { createTenant } from "./actions";
+import { createTenant, setOrganizationVerified } from "./actions";
 
 interface Tenant {
   id: string;
   name: string;
   slug: string;
+  verified: boolean;
+}
+
+function VerifiedToggle({ tenant }: { tenant: Tenant }) {
+  const { showToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function toggle() {
+    setIsSubmitting(true);
+    const result = await setOrganizationVerified(tenant.id, !tenant.verified);
+    setIsSubmitting(false);
+    if (result.error) {
+      showToast({ title: result.error, variant: "error" });
+      return;
+    }
+    showToast({
+      title: tenant.verified ? "Verificação removida" : "Tenant verificado",
+      variant: "success",
+    });
+  }
+
+  return (
+    <Button variant={tenant.verified ? "secondary" : "primary"} isLoading={isSubmitting} onClick={toggle}>
+      {tenant.verified ? "Remover verificação" : "Verificar"}
+    </Button>
+  );
 }
 
 export function TenantsContent({ tenants }: { tenants: Tenant[] }) {
@@ -65,6 +92,7 @@ export function TenantsContent({ tenants }: { tenants: Tenant[] }) {
               <TableHeaderCell>ID</TableHeaderCell>
               <TableHeaderCell>Nome</TableHeaderCell>
               <TableHeaderCell>Slug</TableHeaderCell>
+              <TableHeaderCell>Verificado</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -73,6 +101,9 @@ export function TenantsContent({ tenants }: { tenants: Tenant[] }) {
                 <TableCell className="font-mono text-xs">{tenant.id}</TableCell>
                 <TableCell>{tenant.name}</TableCell>
                 <TableCell className="font-mono text-xs">{tenant.slug}</TableCell>
+                <TableCell>
+                  <VerifiedToggle tenant={tenant} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

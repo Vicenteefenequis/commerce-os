@@ -6,6 +6,7 @@ export interface OrganizationsTable {
   id: Generated<string>;
   name: string;
   slug: string;
+  verified: Generated<boolean>;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }
@@ -21,6 +22,8 @@ export interface VenuesTable {
   category: string | null;
   cover_photo_url: string | null;
   published: Generated<boolean>;
+  latitude: number | null;
+  longitude: number | null;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }
