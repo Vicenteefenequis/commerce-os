@@ -32,6 +32,7 @@ class FakeVenueRepository implements VenueRepositoryPort {
       city: changes.city !== undefined ? changes.city : current.city,
       category: changes.category !== undefined ? changes.category : current.category,
       coverPhotoUrl: changes.coverPhotoUrl !== undefined ? changes.coverPhotoUrl : current.coverPhotoUrl,
+      ageRestriction: changes.ageRestriction !== undefined ? changes.ageRestriction : current.ageRestriction,
       published: changes.published !== undefined ? changes.published : current.published,
     });
     this.venues[index] = updated;
@@ -84,6 +85,18 @@ describe("UpdateVenueUseCase", () => {
 
     const unchanged = await repo.update(tenantId, venueId, {});
     expect(unchanged?.coverPhotoUrl).toBeNull();
+  });
+
+  it("rejects a negative age restriction without writing it", async () => {
+    const repo = seedRepo();
+    const useCase = new UpdateVenueUseCase(repo);
+
+    await expect(
+      useCase.execute(tenantId, venueId, { ageRestriction: -1 }),
+    ).rejects.toBeInstanceOf(InvalidVenueError);
+
+    const unchanged = await repo.update(tenantId, venueId, {});
+    expect(unchanged?.ageRestriction).toBeNull();
   });
 
   it("denies an actor outside the owning organization", async () => {

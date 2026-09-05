@@ -13,6 +13,7 @@ interface VenueRow {
   city: string | null;
   category: string | null;
   cover_photo_url: string | null;
+  age_restriction: number | null;
   published: boolean;
   latitude: number | null;
   longitude: number | null;
@@ -29,6 +30,7 @@ function toDomain(row: VenueRow): Venue {
     city: row.city,
     category: row.category,
     coverPhotoUrl: row.cover_photo_url,
+    ageRestriction: row.age_restriction,
     published: row.published,
     latitude: row.latitude,
     longitude: row.longitude,
@@ -83,6 +85,7 @@ export class KyselyVenueRepository implements VenueRepositoryPort {
     if (changes.city !== undefined) updates.city = changes.city;
     if (changes.category !== undefined) updates.category = changes.category;
     if (changes.coverPhotoUrl !== undefined) updates.cover_photo_url = changes.coverPhotoUrl;
+    if (changes.ageRestriction !== undefined) updates.age_restriction = changes.ageRestriction;
     if (changes.published !== undefined) updates.published = changes.published;
     if (changes.latitude !== undefined) updates.latitude = changes.latitude;
     if (changes.longitude !== undefined) updates.longitude = changes.longitude;

@@ -86,6 +86,33 @@ describe.skipIf(!dbReachable)("PATCH /venues/:id (live Postgres)", () => {
     });
   });
 
+  it("sets a non-negative age restriction (spec: foundation/venue - Owner sets an age restriction)", async () => {
+    const { tenantId, venueId } = await seedTenantWithVenue("Bar do Zé");
+    const cookie = await seedOwner(tenantId);
+
+    const app = createApp();
+    const res = await request(app)
+      .patch(`/venues/${venueId}`)
+      .set("Cookie", cookie)
+      .send({ ageRestriction: 18 });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ageRestriction: 18 });
+  });
+
+  it("rejects a negative age restriction (spec: foundation/venue - Negative age restriction is rejected)", async () => {
+    const { tenantId, venueId } = await seedTenantWithVenue("Bar do Zé");
+    const cookie = await seedOwner(tenantId);
+
+    const app = createApp();
+    const res = await request(app)
+      .patch(`/venues/${venueId}`)
+      .set("Cookie", cookie)
+      .send({ ageRestriction: -1 });
+
+    expect(res.status).toBe(400);
+  });
+
   it("rejects a malformed cover photo URL", async () => {
     const { tenantId, venueId } = await seedTenantWithVenue("Bar do Zé");
     const cookie = await seedOwner(tenantId);

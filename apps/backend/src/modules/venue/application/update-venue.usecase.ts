@@ -42,6 +42,9 @@ export class UpdateVenueUseCase {
     ) {
       throw new InvalidVenueError("longitude must be between -180 and 180");
     }
+    if (changes.ageRestriction != null && changes.ageRestriction < 0) {
+      throw new InvalidVenueError("ageRestriction must be non-negative");
+    }
 
     const updated = await this.venues.update(tenantId, venueId, changes);
     if (!updated) throw new VenueNotFoundError();
