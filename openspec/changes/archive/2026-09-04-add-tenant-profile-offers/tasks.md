@@ -16,5 +16,5 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Manually verify the tab layout on both a desktop and a mobile viewport, confirming exactly three tabs on each (partially verified: SSR HTML confirms exactly 3 tabs, Ofertas selected by default; `Tabs` has no separate mobile/desktop variant so viewport parity is structural — full screenshot check blocked by a missing system library in this sandbox's headless Chromium, deferred by user's choice)
+- [x] 3.1 Manually verify the tab layout on both a desktop and a mobile viewport, confirming exactly three tabs on each (verified by the user in a real browser against the running app)
 - [x] 3.2 Run `pnpm --filter web lint`, `pnpm --filter web build`, and the backend test suite, and verify all succeed
