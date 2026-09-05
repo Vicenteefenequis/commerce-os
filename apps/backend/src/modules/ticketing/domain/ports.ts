@@ -45,3 +45,14 @@ export interface TicketRepositoryPort {
   /** spec: ticketing/ticket - "Ticket code can be rendered as a QR image". */
   findById(tenantId: string, id: string): Promise<Ticket | null>;
 }
+
+/**
+ * Narrow, ticketing-owned read of a Reservation's period, mirroring
+ * access's `ReservationPeriodLookupPort` (same rationale: the listing only
+ * needs the calendar-date period, from which `reservationPeriodBounds`
+ * derives the validity window - it has no reason to depend on capacity's
+ * full Reservation entity or lifecycle).
+ */
+export interface ReservationValidityLookupPort {
+  findPeriodByReservationId(tenantId: string, reservationId: string): Promise<string | null>;
+}
