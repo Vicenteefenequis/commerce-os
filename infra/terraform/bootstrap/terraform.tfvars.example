@@ -1,0 +1,2 @@
+aws_region  = "us-east-1"
+bucket_name = "commerce-os-artifacts-CHANGE-ME" # must be globally unique across all of S3

@@ -5,4 +5,20 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+.env.production
 coverage/
+
+# Terraform - local plan/state artifacts and environment-specific config
+# that must never be committed (bucket names, real IPs, real emails).
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/terraform/*/terraform.tfvars
+infra/terraform/*/backend.hcl
+
+# scripts/deploy build artifacts (release tarballs) - never committed,
+# only ever uploaded to S3.
+scripts/deploy/dist/
+scripts/deploy/config.env

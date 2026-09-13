@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-commerce_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-commerce_os}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-commerce_os}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    image: ${BACKEND_IMAGE:-commerce-os-backend}:${RELEASE_SHA:?RELEASE_SHA is required}
+    working_dir: /repo/apps/backend
+    command: ["pnpm", "run", "migrate:up"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
+      OUTBOX_DB_PASSWORD: ${OUTBOX_DB_PASSWORD:?OUTBOX_DB_PASSWORD is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    image: ${BACKEND_IMAGE:-commerce-os-backend}:${RELEASE_SHA:?RELEASE_SHA is required}
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://app_user:${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-cos_session}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY is required}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is required}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  outbox-worker:
+    image: ${BACKEND_IMAGE:-commerce-os-backend}:${RELEASE_SHA:?RELEASE_SHA is required}
+    command: ["node", "dist/worker/outbox-worker.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://outbox_worker_user:${OUTBOX_DB_PASSWORD:?OUTBOX_DB_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-commerce_os}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    image: ${WEB_IMAGE:-commerce-os-web}:${RELEASE_SHA:?RELEASE_SHA is required}
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://backend:4000
+      PORT: 3000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

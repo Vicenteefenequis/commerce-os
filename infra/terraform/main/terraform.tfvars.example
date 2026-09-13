@@ -1,0 +1,7 @@
+aws_region            = "us-east-1"
+project_name          = "commerce-os"
+instance_type         = "t3.micro"
+ssh_allowed_cidr      = "203.0.113.4/32" # your current public IP/32 - update manually when it changes
+ssh_key_name          = "commerce-os-deploy" # must already exist in EC2 (aws ec2 create-key-pair)
+artifacts_bucket_name = "commerce-os-artifacts-CHANGE-ME" # from ../bootstrap output
+billing_alert_email   = "vicente19981@live.com"

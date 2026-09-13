@@ -1,0 +1,5 @@
+bucket         = "commerce-os-artifacts-CHANGE-ME" # same bucket_name as bootstrap
+key            = "tfstate/main.tfstate"
+region         = "us-east-1"
+dynamodb_table = "commerce-os-terraform-locks"
+encrypt        = true
