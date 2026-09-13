@@ -23,6 +23,9 @@ chmod +x /usr/local/bin/caddy
 rm -f /tmp/caddy.tar.gz
 
 mkdir -p /etc/caddy /opt/commerce-os/app /opt/commerce-os/releases /opt/commerce-os/backup
+# app/ and releases/ are written by deploy.sh over plain SSH as ec2-user
+# (not sudo) - ownership must match or scp/docker load there fails.
+chown ec2-user:ec2-user /opt/commerce-os/app /opt/commerce-os/releases
 
 # --- Caddy: reverse proxy to the app, TLS via sslip.io + Let's Encrypt ---
 
@@ -82,7 +85,7 @@ cd /opt/commerce-os/app
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 FILE="/opt/commerce-os/backup/backup-$${STAMP}.sql.gz"
 
-docker compose exec -T postgres sh -c \
+docker compose -f docker-compose.prod.yml exec -T postgres sh -c \
   'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip >"$${FILE}"
 
 aws s3 cp "$${FILE}" "s3://${artifacts_bucket}/backups/$(basename "$${FILE}")"

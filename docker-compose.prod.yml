@@ -17,7 +17,14 @@ services:
   migrate:
     image: ${BACKEND_IMAGE:-commerce-os-backend}:${RELEASE_SHA:?RELEASE_SHA is required}
     working_dir: /repo/apps/backend
-    command: ["pnpm", "run", "migrate:up"]
+    # Not `pnpm run migrate:up`: the runtime image (unlike the `build`
+    # stage used in dev's docker-compose.yml) doesn't carry the
+    # workspace root package.json/pnpm-workspace.yaml, so corepack can't
+    # resolve the pinned pnpm version and falls back to fetching latest,
+    # which errors on pnpm's newer ignored-builds gate. node-pg-migrate
+    # reads DATABASE_URL straight from the environment, so invoke its
+    # binary directly instead.
+    command: ["./node_modules/.bin/node-pg-migrate", "up", "-m", "migrations"]
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-commerce_os}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-commerce_os}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}
