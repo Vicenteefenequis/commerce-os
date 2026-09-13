@@ -128,6 +128,7 @@ describe.skipIf(!dbReachable)("GET /orders/:orderId/tickets (live Postgres)", ()
     expect(res.status).toBe(200);
     expect(res.body.tickets).toHaveLength(1);
     const [ticket] = res.body.tickets as Array<Record<string, unknown>>;
+    if (!ticket) throw new Error("expected a ticket");
     expect(ticket).toMatchObject({
       organizationName: "Zoo Tickets Contexto",
       organizationSlug: seed.tenantId,
