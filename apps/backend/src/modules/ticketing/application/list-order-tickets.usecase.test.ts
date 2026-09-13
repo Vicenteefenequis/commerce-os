@@ -91,6 +91,9 @@ class FakeOrganizationRepository implements OrganizationRepositoryPort {
   async listAll(): Promise<Organization[]> {
     throw new Error("not used by listing");
   }
+  async setVerified(): Promise<Organization | null> {
+    throw new Error("not used by listing");
+  }
 }
 
 class FakeProductRepository implements ProductRepositoryPort {

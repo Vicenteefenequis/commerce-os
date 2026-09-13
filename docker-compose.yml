@@ -55,7 +55,12 @@ services:
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
       # Payments (M3) - Stripe test-mode keys, from .env (never hardcoded here).
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      # Static fallback only - the `stripe-cli` service below keeps the
+      # real, current secret in the shared volume file below, since
+      # `stripe listen` rotates it on every restart (see
+      # stripe-payment-provider.ts's resolveWebhookSecret()).
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_WEBHOOK_SECRET_FILE: /shared/stripe-webhook-secret
       # Transactional email (M10) - Resend (if set in .env) still takes
       # priority over SMTP; SMTP_HOST is the mailpit service's in-network
       # hostname, not localhost (backend runs in its own container).
@@ -65,6 +70,8 @@ services:
       SMTP_PORT: 1025
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+    volumes:
+      - stripe_webhook_secret:/shared:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,6 +120,30 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Dev only - forwards Stripe test-mode webhooks to the backend so
+  # payments actually settle without a publicly reachable URL. Runs as
+  # a real docker-compose service (not a background shell process) so
+  # it survives closing whatever terminal/session started the stack,
+  # and `restart: unless-stopped` brings it back after a crash or
+  # `docker restart`. See scripts/stripe-listen.sh for why the webhook
+  # secret it prints is written to a shared file instead of .env.
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/scripts/stripe-listen.sh"]
+    environment:
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      FORWARD_TO: http://backend:4000/webhooks/stripe
+    volumes:
+      # Mounted as a directory, not a single file - single-file bind
+      # mounts hit a Docker Desktop/WSL2 bug ("not a directory" on
+      # mountpoint creation) that a directory mount avoids.
+      - ./scripts:/scripts:ro
+      - stripe_webhook_secret:/shared:rw
+    depends_on:
+      backend:
+        condition: service_healthy
+
   web:
     build:
       context: .
@@ -130,3 +161,4 @@ services:
 
 volumes:
   postgres_data:
+  stripe_webhook_secret:

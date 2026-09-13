@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import Stripe from "stripe";
 import { env } from "../../../config/env.js";
 import { InvalidWebhookSignatureError } from "../application/payment-errors.js";
@@ -9,6 +10,29 @@ import type {
   RefundInput,
   RefundResult,
 } from "../domain/ports.js";
+
+/**
+ * Dev-only: `stripe listen` (the `stripe-cli` docker-compose service)
+ * mints a fresh ephemeral webhook signing secret every time it
+ * restarts, so a static STRIPE_WEBHOOK_SECRET in .env goes stale
+ * whenever that container restarts. When STRIPE_WEBHOOK_SECRET_FILE is
+ * set, re-read it on every request instead of trusting the value `env`
+ * captured once at process boot. Falls back to env.stripeWebhookSecret
+ * if the file isn't there yet (e.g. sidecar still starting) or the var
+ * isn't set at all (production, where the secret really is static).
+ */
+function resolveWebhookSecret(): string | undefined {
+  const filePath = process.env.STRIPE_WEBHOOK_SECRET_FILE;
+  if (filePath) {
+    try {
+      const fromFile = readFileSync(filePath, "utf8").trim();
+      if (fromFile) return fromFile;
+    } catch {
+      // File not written yet - fall through to the static env value.
+    }
+  }
+  return env.stripeWebhookSecret;
+}
 
 const STRIPE_PAYMENT_METHOD_TYPES: Record<CreateIntentInput["method"], string[]> = {
   card: ["card"],
@@ -25,7 +49,7 @@ export class StripePaymentProvider implements PaymentProviderPort {
   private readonly stripe: Stripe;
   private readonly webhookSecret: string;
 
-  constructor(secretKey: string | undefined = env.stripeSecretKey, webhookSecret: string | undefined = env.stripeWebhookSecret) {
+  constructor(secretKey: string | undefined = env.stripeSecretKey, webhookSecret: string | undefined = resolveWebhookSecret()) {
     if (!secretKey) throw new Error("Missing required environment variable: STRIPE_SECRET_KEY");
     if (!webhookSecret) throw new Error("Missing required environment variable: STRIPE_WEBHOOK_SECRET");
     this.stripe = new Stripe(secretKey);
