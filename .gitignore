@@ -22,3 +22,8 @@ infra/terraform/*/backend.hcl
 # only ever uploaded to S3.
 scripts/deploy/dist/
 scripts/deploy/config.env
+
+# Manual backup of infra/terraform/bootstrap's local tfstate (that root
+# deliberately stays off the S3 backend it creates - see design.md).
+# Kept outside the worktree so it survives the worktree being cleared.
+.infra-state-backup/
