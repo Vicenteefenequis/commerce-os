@@ -15,8 +15,15 @@ scp -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new \
   "$REPO_ROOT/docker-compose.prod.yml" \
   "$SSH_USER@$INSTANCE_HOST:$REMOTE_APP_DIR/docker-compose.prod.yml"
 
-log "deploying $SHA on $INSTANCE_HOST"
-ssh_app bash -s <<EOF
+# The remote steps run from an uploaded script file, not a `bash -s`
+# heredoc piped over ssh's stdin - `docker compose run` (and anything
+# else that touches stdin/tty) previously competed with that same
+# stdin stream for the rest of the script, so lines after it silently
+# never ran even though ssh still exited 0. Found by deploying for
+# real: containers stayed on the old tag after a "successful" deploy.
+REMOTE_SCRIPT="$DIST_DIR/remote-deploy-$SHA.sh"
+cat >"$REMOTE_SCRIPT" <<EOF
+#!/bin/bash
 set -euo pipefail
 
 mkdir -p "$REMOTE_RELEASES_DIR"
@@ -40,7 +47,7 @@ else
 fi
 
 echo "[remote] running pending migrations"
-docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
+docker compose -f docker-compose.prod.yml --env-file .env run --rm -T migrate
 
 echo "[remote] starting release $SHA"
 docker compose -f docker-compose.prod.yml --env-file .env up -d postgres backend outbox-worker web
@@ -53,5 +60,11 @@ ls -t release-*.tar.gz 2>/dev/null | tail -n +\$(($LOCAL_RELEASES_KEPT_ON_INSTAN
 done
 docker image prune -f >/dev/null
 EOF
+
+log "deploying $SHA on $INSTANCE_HOST"
+scp -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new \
+  "$REMOTE_SCRIPT" "$SSH_USER@$INSTANCE_HOST:/tmp/deploy-$SHA.sh"
+ssh_app "chmod +x /tmp/deploy-$SHA.sh && /tmp/deploy-$SHA.sh && rm -f /tmp/deploy-$SHA.sh"
+rm -f "$REMOTE_SCRIPT"
 
 log "deployed $SHA"
