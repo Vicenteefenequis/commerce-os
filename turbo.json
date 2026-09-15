@@ -14,7 +14,15 @@
     },
     "test": {
       "dependsOn": ["build"],
-      "outputs": []
+      "outputs": [],
+      "env": [
+        "DATABASE_URL",
+        "APP_DB_PASSWORD",
+        "OUTBOX_DB_PASSWORD",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "SMTP_HOST"
+      ]
     }
   }
 }
