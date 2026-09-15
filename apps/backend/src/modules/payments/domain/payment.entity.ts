@@ -2,7 +2,16 @@ export class InvalidPaymentError extends Error {}
 
 export type PaymentStatus = "pending" | "succeeded" | "failed" | "partially_refunded" | "refunded";
 
-export type PaymentMethod = "card" | "pix";
+/** spec: payments/payment - "Supported payment methods" (adds cash). */
+export type PaymentMethod = "card" | "pix" | "cash";
+
+/**
+ * `stripe` for Pix/card, processed through the Payment Provider
+ * abstraction; `manual` for cash, recorded directly by an admin action
+ * without involving a Payment Provider (spec: "Supported payment
+ * methods").
+ */
+export type PaymentProvider = "stripe" | "manual";
 
 /**
  * Guarded state machine (spec: payments/payment - "Payment lifecycle
@@ -26,7 +35,7 @@ export interface PaymentProps {
   id: string;
   tenantId: string;
   orderId: string;
-  provider: "stripe";
+  provider: PaymentProvider;
   providerPaymentId: string;
   method: PaymentMethod;
   status: PaymentStatus;
@@ -71,7 +80,7 @@ export class Payment {
     return this.props.orderId;
   }
 
-  get provider(): "stripe" {
+  get provider(): PaymentProvider {
     return this.props.provider;
   }
 

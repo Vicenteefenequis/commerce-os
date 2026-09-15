@@ -10,6 +10,9 @@ export type OrderStatus =
   | "cancelled"
   | "expired";
 
+/** spec: commerce/order - "Order records its sales channel". */
+export type OrderChannel = "storefront" | "counter";
+
 export interface OrderLineProps {
   id: string;
   orderId: string;
@@ -85,6 +88,12 @@ export interface OrderProps {
   customerId: string;
   status: OrderStatus;
   idempotencyKey?: string | null;
+  /**
+   * Which channel created this Order (spec: commerce/order - "Order
+   * records its sales channel"). Optional and defaulting to `storefront`
+   * so every pre-existing caller/test is unaffected.
+   */
+  channel?: OrderChannel;
   lines: OrderLine[];
 }
 
@@ -127,6 +136,10 @@ export class Order {
 
   get idempotencyKey(): string | null {
     return this.props.idempotencyKey ?? null;
+  }
+
+  get channel(): OrderChannel {
+    return this.props.channel ?? "storefront";
   }
 
   get lines(): OrderLine[] {

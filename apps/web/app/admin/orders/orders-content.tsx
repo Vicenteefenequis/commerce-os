@@ -8,13 +8,20 @@ export interface OrderFilters {
   id?: string;
   customer?: string;
   status?: string;
+  channel?: string;
 }
 
 const STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS);
 
+const CHANNEL_LABELS: Record<string, string> = {
+  storefront: "Plataforma",
+  counter: "Balcão (manual)",
+};
+const CHANNEL_OPTIONS = Object.entries(CHANNEL_LABELS);
+
 /** spec: commerce/order - "Orders can be listed by tenant". No create action: Orders are only created via checkout. */
 export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; filters: OrderFilters }) {
-  const hasFilters = Boolean(filters.id || filters.customer || filters.status);
+  const hasFilters = Boolean(filters.id || filters.customer || filters.status || filters.channel);
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,6 +73,24 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="order-channel" className="text-sm font-medium text-fg">
+            Canal
+          </label>
+          <select
+            id="order-channel"
+            name="channel"
+            defaultValue={filters.channel ?? ""}
+            className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg"
+          >
+            <option value="">Todos</option>
+            {CHANNEL_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="submit"
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90"
@@ -90,6 +115,7 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
               <TableHeaderCell>ID</TableHeaderCell>
               <TableHeaderCell>Unidade</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Canal</TableHeaderCell>
               <TableHeaderCell>Total</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -107,6 +133,11 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
                 <TableCell label="Status">
                   <Badge variant={ORDER_STATUS_VARIANTS[order.status] ?? "neutral"}>
                     {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                  </Badge>
+                </TableCell>
+                <TableCell label="Canal">
+                  <Badge variant={order.channel === "counter" ? "neutral" : "success"}>
+                    {CHANNEL_LABELS[order.channel] ?? order.channel}
                   </Badge>
                 </TableCell>
                 <TableCell label="Total">R$ {(order.totalCents / 100).toFixed(2)}</TableCell>

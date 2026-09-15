@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import type { Trx } from "../../../http/tx-route.js";
 import { Order, OrderLine } from "../domain/order.entity.js";
-import type { OrderStatus } from "../domain/order.entity.js";
+import type { OrderChannel, OrderStatus } from "../domain/order.entity.js";
 import type { CreateOrderInput, OrderListFilters, OrderRepositoryPort } from "../domain/ports.js";
 
 export class KyselyOrderRepository implements OrderRepositoryPort {
@@ -18,6 +18,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
         customer_id: input.customerId,
         status: "draft",
         idempotency_key: input.idempotencyKey ?? null,
+        channel: input.channel,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -90,6 +91,9 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     }
     if (filters?.status) {
       query = query.where("orders.status", "=", filters.status);
+    }
+    if (filters?.channel) {
+      query = query.where("orders.channel", "=", filters.channel);
     }
     if (filters?.customerQuery) {
       const pattern = `%${filters.customerQuery}%`;
@@ -178,6 +182,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
       customer_id: string;
       status: OrderStatus;
       idempotency_key: string | null;
+      channel: OrderChannel;
     },
     lineRows: Array<{
       id: string;
@@ -197,6 +202,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
       customerId: row.customer_id,
       status: row.status,
       idempotencyKey: row.idempotency_key,
+      channel: row.channel,
       lines: lineRows.map((l) =>
         OrderLine.create({
           id: l.id,

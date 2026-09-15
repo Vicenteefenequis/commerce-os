@@ -1,8 +1,9 @@
 import { sql } from "kysely";
 import type { Trx } from "../../../http/tx-route.js";
-import type { OrderStatus } from "../../commerce/domain/order.entity.js";
+import type { OrderChannel, OrderStatus } from "../../commerce/domain/order.entity.js";
 import {
   GMV_ORDER_STATUSES,
+  type DashboardChannelBreakdown,
   type DashboardSummary,
   type DashboardSummaryQuery,
   type DashboardSummaryRepositoryPort,
@@ -18,6 +19,8 @@ const ALL_ORDER_STATUSES: OrderStatus[] = [
   "cancelled",
   "expired",
 ];
+
+const ALL_ORDER_CHANNELS: OrderChannel[] = ["storefront", "counter"];
 
 export class KyselyDashboardSummaryRepository implements DashboardSummaryRepositoryPort {
   constructor(private readonly trx: Trx) {}
@@ -35,13 +38,14 @@ export class KyselyDashboardSummaryRepository implements DashboardSummaryReposit
       )
       .select(({ fn }) => [
         "orders.status as status",
+        "orders.channel as channel",
         fn.count<string>("orders.id").distinct().as("order_count"),
         sql<string>`coalesce(sum(order_lines.unit_price_cents * order_lines.quantity), 0)`.as("total_cents"),
       ])
       .where("orders.tenant_id", "=", query.tenantId)
       .where(sql<boolean>`orders.created_at >= ${query.from}`)
       .where(sql<boolean>`orders.created_at < ${query.to}`)
-      .groupBy("orders.status");
+      .groupBy(["orders.status", "orders.channel"]);
 
     if (query.venueId) {
       statusRowsQuery = statusRowsQuery.where("orders.venue_id", "=", query.venueId);
@@ -50,16 +54,56 @@ export class KyselyDashboardSummaryRepository implements DashboardSummaryReposit
     const statusRows = await statusRowsQuery.execute();
 
     const countsByStatus = Object.fromEntries(ALL_ORDER_STATUSES.map((s) => [s, 0])) as Record<OrderStatus, number>;
+    const channels = Object.fromEntries(
+      ALL_ORDER_CHANNELS.map((c) => [c, { gmvCents: 0, orderCount: 0, ticketCount: 0 }]),
+    ) as Record<OrderChannel, DashboardChannelBreakdown>;
     let gmvCents = 0;
     let gmvOrderCount = 0;
     for (const row of statusRows) {
       const status = row.status as OrderStatus;
+      const channel = row.channel as OrderChannel;
       const count = Number(row.order_count);
-      countsByStatus[status] = count;
+      countsByStatus[status] = (countsByStatus[status] ?? 0) + count;
       if (GMV_ORDER_STATUSES.includes(status)) {
-        gmvCents += Number(row.total_cents);
+        const rowGmvCents = Number(row.total_cents);
+        gmvCents += rowGmvCents;
         gmvOrderCount += count;
+        channels[channel].gmvCents += rowGmvCents;
+        channels[channel].orderCount += count;
       }
+    }
+
+    /**
+     * spec: admin/dashboard - "Summary splits order and ticket counts by
+     * channel". Tickets are only issued once an Order reaches a
+     * GMV-counted status, so this joins through Entitlement -> Order the
+     * same way ticketing/list-order-tickets.usecase.ts does, scoped to
+     * the same tenant/venue/period window as the rest of the summary.
+     */
+    let ticketRowsQuery = this.trx
+      .selectFrom("tickets")
+      .innerJoin("entitlements", (join) =>
+        join
+          .onRef("entitlements.id", "=", "tickets.entitlement_id")
+          .onRef("entitlements.tenant_id", "=", "tickets.tenant_id"),
+      )
+      .innerJoin("orders", (join) =>
+        join.onRef("orders.id", "=", "entitlements.order_id").onRef("orders.tenant_id", "=", "entitlements.tenant_id"),
+      )
+      .select(({ fn }) => ["orders.channel as channel", fn.countAll<string>().as("ticket_count")])
+      .where("tickets.tenant_id", "=", query.tenantId)
+      .where(sql<boolean>`orders.created_at >= ${query.from}`)
+      .where(sql<boolean>`orders.created_at < ${query.to}`)
+      .groupBy("orders.channel");
+
+    if (query.venueId) {
+      ticketRowsQuery = ticketRowsQuery.where("orders.venue_id", "=", query.venueId);
+    }
+
+    const ticketRows = await ticketRowsQuery.execute();
+    for (const row of ticketRows) {
+      const channel = row.channel as OrderChannel;
+      channels[channel].ticketCount = Number(row.ticket_count);
     }
 
     let visitorsQuery = this.trx
@@ -87,6 +131,7 @@ export class KyselyDashboardSummaryRepository implements DashboardSummaryReposit
       visitors: {
         authorizedCount: Number(visitorsRow.count),
       },
+      channels,
     };
   }
 }

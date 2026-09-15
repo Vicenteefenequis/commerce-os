@@ -6,6 +6,7 @@ import { PNG } from "pngjs";
 import jsQRImport from "jsqr";
 import { createApp } from "../../../http/app.js";
 import { db } from "../../../db/kysely.js";
+import { sessionCookieHeader } from "../../identity/infrastructure/cookie.js";
 
 // jsqr's CJS build and its .d.ts disagree on the default-export shape under
 // NodeNext resolution; the runtime value is the callable function either way.
@@ -105,6 +106,24 @@ async function seedOrderWithTickets(name: string, codeLabels: string[]) {
   return { tenantId, orderId, ticketIds, ticketCodes };
 }
 
+async function seedAuthenticatedStaff(tenantId: string) {
+  const userId = randomUUID();
+  await db
+    .insertInto("users")
+    .values({ id: userId, tenant_id: tenantId, email: `staff-${userId}@example.com`, password_hash: "x" })
+    .execute();
+  await db
+    .insertInto("role_assignments")
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "owner" })
+    .execute();
+  const session = await db
+    .insertInto("sessions")
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, expires_at: new Date(Date.now() + 900_000) })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return sessionCookieHeader(session.id);
+}
+
 function decodeQr(png: Buffer): string | undefined {
   const image = PNG.sync.read(png);
   return jsQR(new Uint8ClampedArray(image.data), image.width, image.height)?.data;
@@ -192,5 +211,41 @@ describe.skipIf(!dbReachable)("GET /tickets/:ticketId/qrcode (live Postgres)", (
   it("requires a tenantId", async () => {
     const res = await request(createApp()).get(`/tickets/${randomUUID()}/qrcode`);
     expect(res.status).toBe(400);
+  });
+});
+
+describe.skipIf(!dbReachable)("GET /tickets/:ticketId/print (live Postgres)", () => {
+  it("rejects an unauthenticated request", async () => {
+    const seed = await seedOrderWithTickets("Zoo Print Sem Sessao", ["code-print-anon"]);
+    const res = await request(createApp()).get(`/tickets/${seed.ticketIds[0]}/print`);
+    expect(res.status).toBe(401);
+  });
+
+  it("renders the print context for an authorized session within the ticket's own tenant", async () => {
+    const seed = await seedOrderWithTickets("Zoo Print", ["code-print"]);
+    const cookie = await seedAuthenticatedStaff(seed.tenantId);
+
+    const res = await request(createApp()).get(`/tickets/${seed.ticketIds[0]}/print`).set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      code: seed.ticketCodes[0],
+      organizationName: "Zoo Print",
+      offerName: "Ingresso",
+      loteName: "Ingresso",
+      buyerName: "Ana",
+    });
+  });
+
+  it("denies a session from another Organization", async () => {
+    const seed = await seedOrderWithTickets("Zoo Print Dono", ["code-print-outro"]);
+    const otherTenantId = randomUUID();
+    await db.insertInto("organizations").values({ id: otherTenantId, name: "Outra Zoo", slug: otherTenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${otherTenantId}, false)`.execute(db);
+    const cookie = await seedAuthenticatedStaff(otherTenantId);
+
+    const res = await request(createApp()).get(`/tickets/${seed.ticketIds[0]}/print`).set("Cookie", cookie);
+
+    expect(res.status).toBe(404);
   });
 });

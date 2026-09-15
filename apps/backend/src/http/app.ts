@@ -17,6 +17,7 @@ import { paymentWebhookRouter } from "../modules/payments/infrastructure/webhook
 import { accessScanRouter } from "../modules/access/infrastructure/scan.routes.js";
 import { ticketRouter } from "../modules/ticketing/infrastructure/ticket.routes.js";
 import { dashboardRouter } from "../modules/admin/infrastructure/dashboard.routes.js";
+import { counterSaleRouter } from "../modules/admin/infrastructure/counter-sale.routes.js";
 import { storefrontRouter } from "../modules/storefront/infrastructure/storefront.routes.js";
 
 export function createApp() {
@@ -55,6 +56,7 @@ export function createApp() {
   app.use(accessScanRouter);
   app.use(ticketRouter);
   app.use(dashboardRouter);
+  app.use(counterSaleRouter);
   app.use(storefrontRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {

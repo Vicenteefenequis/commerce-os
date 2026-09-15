@@ -3,6 +3,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import type { DashboardSummary, VenueOption } from "./page";
 
+const CHANNEL_LABELS: Record<"storefront" | "counter", string> = {
+  storefront: "Plataforma",
+  counter: "Balcão (manual)",
+};
+
 const PERIOD_OPTIONS = [
   { value: "today", label: "Hoje" },
   { value: "7d", label: "Últimos 7 dias" },
@@ -159,6 +164,33 @@ export function DashboardContent({
                       <TableCell>{count}</TableCell>
                     </TableRow>
                   ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          <Card>
+            <CardHeader title="Vendas por canal" />
+            <p className="mb-3 text-sm text-fg-muted">
+              Quanto veio da plataforma (loja online) e quanto foi vendido manualmente no balcão.
+            </p>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Canal</TableHeaderCell>
+                  <TableHeaderCell>GMV</TableHeaderCell>
+                  <TableHeaderCell>Pedidos</TableHeaderCell>
+                  <TableHeaderCell>Ingressos</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(["storefront", "counter"] as const).map((channel) => (
+                  <TableRow key={channel}>
+                    <TableCell label="Canal">{CHANNEL_LABELS[channel]}</TableCell>
+                    <TableCell label="GMV">{formatCents(summary.channels[channel].gmvCents)}</TableCell>
+                    <TableCell label="Pedidos">{summary.channels[channel].orderCount}</TableCell>
+                    <TableCell label="Ingressos">{summary.channels[channel].ticketCount}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </Card>

@@ -200,6 +200,8 @@ export type OrderStatus =
   | "cancelled"
   | "expired";
 
+export type OrderChannel = "storefront" | "counter";
+
 export interface OrdersTable {
   id: Generated<string>;
   tenant_id: string;
@@ -207,6 +209,7 @@ export interface OrdersTable {
   customer_id: string;
   status: OrderStatus;
   idempotency_key: string | null;
+  channel: Generated<OrderChannel>;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
 }

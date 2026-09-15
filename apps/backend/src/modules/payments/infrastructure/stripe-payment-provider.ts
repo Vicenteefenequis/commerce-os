@@ -34,9 +34,16 @@ function resolveWebhookSecret(): string | undefined {
   return env.stripeWebhookSecret;
 }
 
+/**
+ * `cash` never reaches this provider - CreateCashPaymentUseCase settles it
+ * directly without a Payment Provider intent (spec: payments/payment -
+ * "Supported payment methods"). Listed here only so this stays a total
+ * mapping over `PaymentMethod`.
+ */
 const STRIPE_PAYMENT_METHOD_TYPES: Record<CreateIntentInput["method"], string[]> = {
   card: ["card"],
   pix: ["pix"],
+  cash: [],
 };
 
 /**
