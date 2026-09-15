@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import type { Trx } from "../../../http/tx-route.js";
 import { Payment } from "../domain/payment.entity.js";
-import type { PaymentMethod, PaymentStatus } from "../domain/payment.entity.js";
+import type { PaymentMethod, PaymentProvider, PaymentStatus } from "../domain/payment.entity.js";
 import type { CreatePaymentInput, PaymentRepositoryPort } from "../domain/ports.js";
 
 export class KyselyPaymentRepository implements PaymentRepositoryPort {
@@ -18,7 +18,7 @@ export class KyselyPaymentRepository implements PaymentRepositoryPort {
         provider: input.provider,
         provider_payment_id: input.providerPaymentId,
         method: input.method,
-        status: "pending",
+        status: input.status ?? "pending",
         amount_cents: input.amountCents,
         currency: input.currency,
       })
@@ -122,7 +122,7 @@ export class KyselyPaymentRepository implements PaymentRepositoryPort {
       id: row.id,
       tenantId: row.tenant_id,
       orderId: row.order_id,
-      provider: row.provider as "stripe",
+      provider: row.provider as PaymentProvider,
       providerPaymentId: row.provider_payment_id,
       method: row.method as PaymentMethod,
       status: row.status,

@@ -45,6 +45,7 @@ async function seedOrder(
   venueId: string,
   name: string,
   customer: { email: string; name: string } = { email: "ana@example.com", name: "Ana" },
+  channel: "storefront" | "counter" = "storefront",
 ) {
   const variantId = await db.transaction().execute(async (trx) => {
     await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
@@ -76,6 +77,7 @@ async function seedOrder(
       lines: [{ variantId, quantity: 1 }],
       holdExpiresAt: new Date(Date.now() + 900_000),
       actorUserId,
+      channel,
     });
   });
 }
@@ -182,5 +184,37 @@ describe.skipIf(!dbReachable)("GET /orders (live Postgres)", () => {
 
     const invalidStatus = await request(app).get("/orders?status=bogus").set("Cookie", cookie);
     expect(invalidStatus.status).toBe(400);
+  });
+
+  it("filters by channel, alone and combined with another filter", async () => {
+    const tenantId = randomUUID();
+    const venueId = randomUUID();
+
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Channel", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
+
+    const storefrontOrder = await seedOrder(tenantId, venueId, "Ingresso Storefront", undefined, "storefront");
+    const counterOrder = await seedOrder(
+      tenantId,
+      venueId,
+      "Ingresso Counter",
+      { email: "balcao@example.com", name: "Balcão" },
+      "counter",
+    );
+
+    const cookie = await seedAuthenticatedStaff(tenantId);
+    const app = createApp();
+
+    const byChannel = await request(app).get("/orders?channel=counter").set("Cookie", cookie);
+    expect(byChannel.status).toBe(200);
+    expect((byChannel.body.orders as Array<{ id: string }>).map((o) => o.id)).toEqual([counterOrder.id]);
+
+    const combined = await request(app).get("/orders?channel=storefront&status=draft").set("Cookie", cookie);
+    expect(combined.status).toBe(200);
+    expect((combined.body.orders as Array<{ id: string }>).map((o) => o.id)).toEqual([storefrontOrder.id]);
+
+    const invalidChannel = await request(app).get("/orders?channel=bogus").set("Cookie", cookie);
+    expect(invalidChannel.status).toBe(400);
   });
 });

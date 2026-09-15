@@ -115,6 +115,7 @@ class FakeOrderRepository implements OrderRepositoryPort {
       customerId: input.customerId,
       status: "draft",
       idempotencyKey: input.idempotencyKey,
+      channel: input.channel,
       lines: input.lines.map((l) => OrderLine.create({ ...l, orderId: input.id, tenantId: input.tenantId })),
     });
     this.created.push(order);
@@ -227,6 +228,37 @@ describe("CreateOrderUseCase", () => {
     expect(order.totalCents).toBe(2 * 3000 + 3 * 5000);
     expect(orders.created).toHaveLength(1);
     expect(publisher.published.some((e) => e.type === ORDER_CREATED)).toBe(true);
+  });
+
+  it("defaults the order's channel to storefront when not specified", async () => {
+    const { useCase } = buildUseCase({ commitAccepts: true });
+
+    const order = await useCase.execute({
+      tenantId,
+      venueId,
+      customer,
+      lines: [{ variantId: freeVariant.id, quantity: 1 }],
+      holdExpiresAt: new Date(Date.now() + 900_000),
+      actorUserId,
+    });
+
+    expect(order.channel).toBe("storefront");
+  });
+
+  it("records the counter channel when explicitly requested", async () => {
+    const { useCase } = buildUseCase({ commitAccepts: true });
+
+    const order = await useCase.execute({
+      tenantId,
+      venueId,
+      customer,
+      lines: [{ variantId: freeVariant.id, quantity: 1 }],
+      holdExpiresAt: new Date(Date.now() + 900_000),
+      actorUserId,
+      channel: "counter",
+    });
+
+    expect(order.channel).toBe("counter");
   });
 
   it("rejects checkout and creates no order when capacity is unavailable", async () => {

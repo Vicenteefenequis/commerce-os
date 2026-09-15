@@ -55,6 +55,7 @@ async function seedOrder(
   status: "draft" | "paid" | "fulfilled" | "refunded" | "cancelled",
   unitPriceCents: number,
   createdAt: Date,
+  channel: "storefront" | "counter" = "storefront",
 ) {
   const customerId = randomUUID();
   const orderId = randomUUID();
@@ -66,17 +67,18 @@ async function seedOrder(
     .execute();
   await db
     .insertInto("orders")
-    .values({ id: orderId, tenant_id: tenantId, venue_id: venueId, customer_id: customerId, status })
+    .values({ id: orderId, tenant_id: tenantId, venue_id: venueId, customer_id: customerId, status, channel })
     .execute();
   await db
     .updateTable("orders")
     .set({ created_at: sql`${createdAt.toISOString()}::timestamptz` })
     .where("id", "=", orderId)
     .execute();
+  const lineId = randomUUID();
   await db
     .insertInto("order_lines")
     .values({
-      id: randomUUID(),
+      id: lineId,
       tenant_id: tenantId,
       order_id: orderId,
       variant_id: variantId,
@@ -86,7 +88,20 @@ async function seedOrder(
     })
     .execute();
 
-  return orderId;
+  return { orderId, lineId, customerId };
+}
+
+/** Issues one Entitlement and one Ticket for an order line, as the ticketing outbox consumer would on payment. */
+async function seedTicket(tenantId: string, orderId: string, lineId: string, customerId: string) {
+  const entitlementId = randomUUID();
+  await db
+    .insertInto("entitlements")
+    .values({ id: entitlementId, tenant_id: tenantId, order_id: orderId, order_line_id: lineId, customer_id: customerId })
+    .execute();
+  await db
+    .insertInto("tickets")
+    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, code: `TCK-${randomUUID()}` })
+    .execute();
 }
 
 async function seedScanAttempt(
@@ -214,6 +229,73 @@ describe.skipIf(!dbReachable)("GET /dashboard/summary (live Postgres)", () => {
     expect(noData.body.sales.gmvCents).toBe(0);
     expect(noData.body.sales.averageOrderValueCents).toBe(0);
     expect(noData.body.visitors.authorizedCount).toBe(0);
+  });
+
+  it("splits GMV, order counts, and ticket counts by sales channel", async () => {
+    const tenantId = randomUUID();
+    const venueId = randomUUID();
+
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Channels", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
+
+    const rangeStart = new Date("2026-06-01T00:00:00Z");
+    const rangeEnd = new Date("2026-06-30T00:00:00Z");
+    const inRange = new Date("2026-06-15T00:00:00Z");
+
+    const platformOrder = await seedOrder(tenantId, venueId, "paid", 5000, inRange, "storefront");
+    await seedTicket(tenantId, platformOrder.orderId, platformOrder.lineId, platformOrder.customerId);
+
+    const manualOrder1 = await seedOrder(tenantId, venueId, "paid", 2000, inRange, "counter");
+    await seedTicket(tenantId, manualOrder1.orderId, manualOrder1.lineId, manualOrder1.customerId);
+    const manualOrder2 = await seedOrder(tenantId, venueId, "fulfilled", 3000, inRange, "counter");
+    await seedTicket(tenantId, manualOrder2.orderId, manualOrder2.lineId, manualOrder2.customerId);
+
+    const cookie = await seedAuthenticatedStaff(tenantId);
+    const app = createApp();
+
+    const res = await request(app)
+      .get(`/dashboard/summary?from=${rangeStart.toISOString()}&to=${rangeEnd.toISOString()}`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.channels.storefront.gmvCents).toBe(5000);
+    expect(res.body.channels.storefront.orderCount).toBe(1);
+    expect(res.body.channels.storefront.ticketCount).toBe(1);
+    expect(res.body.channels.counter.gmvCents).toBe(5000);
+    expect(res.body.channels.counter.orderCount).toBe(2);
+    expect(res.body.channels.counter.ticketCount).toBe(2);
+    // Combined totals are unaffected by the split.
+    expect(res.body.sales.gmvCents).toBe(10000);
+  });
+
+  it("reports zero for a channel with no activity in the period, without affecting the other channel", async () => {
+    const tenantId = randomUUID();
+    const venueId = randomUUID();
+
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo One Channel", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
+
+    const rangeStart = new Date("2026-06-01T00:00:00Z");
+    const rangeEnd = new Date("2026-06-30T00:00:00Z");
+    const inRange = new Date("2026-06-15T00:00:00Z");
+
+    await seedOrder(tenantId, venueId, "paid", 4000, inRange, "storefront");
+
+    const cookie = await seedAuthenticatedStaff(tenantId);
+    const app = createApp();
+
+    const res = await request(app)
+      .get(`/dashboard/summary?from=${rangeStart.toISOString()}&to=${rangeEnd.toISOString()}`)
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.channels.storefront.gmvCents).toBe(4000);
+    expect(res.body.channels.storefront.orderCount).toBe(1);
+    expect(res.body.channels.counter.gmvCents).toBe(0);
+    expect(res.body.channels.counter.orderCount).toBe(0);
+    expect(res.body.channels.counter.ticketCount).toBe(0);
   });
 
   it("rejects a request missing from/to", async () => {

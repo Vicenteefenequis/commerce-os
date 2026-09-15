@@ -1,4 +1,4 @@
-import type { Order, OrderStatus } from "./order.entity.js";
+import type { Order, OrderChannel, OrderStatus } from "./order.entity.js";
 
 export interface CreateOrderLineInput {
   id: string;
@@ -15,6 +15,7 @@ export interface CreateOrderInput {
   venueId: string;
   customerId: string;
   idempotencyKey?: string | null;
+  channel: OrderChannel;
   lines: CreateOrderLineInput[];
 }
 
@@ -24,6 +25,8 @@ export interface OrderListFilters {
   /** Matches against the order's Customer email or name (case-insensitive, partial match). */
   customerQuery?: string;
   status?: OrderStatus;
+  /** spec: commerce/order - "Orders can be filtered by sales channel". */
+  channel?: OrderChannel;
 }
 
 export interface OrderRepositoryPort {

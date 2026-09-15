@@ -1,8 +1,17 @@
 import { Router } from "express";
-import { txRouteWithTenant } from "../../../http/tx-route.js";
-import { getTicketQrCodeController, listOrderTicketsController } from "./ticket.controller.js";
+import { txRoute, txRouteWithTenant } from "../../../http/tx-route.js";
+import { requireAuth } from "../../../http/middleware/require-auth.js";
+import { getTicketPrintController, getTicketQrCodeController, listOrderTicketsController } from "./ticket.controller.js";
 
 export const ticketRouter = Router();
+
+/**
+ * spec: ticketing/ticket-print. Authenticated - registered before the
+ * public `/tickets/:ticketId/qrcode` route below only for readability;
+ * Express matches `/tickets/:ticketId/print` on its own literal segment
+ * regardless of order.
+ */
+ticketRouter.get("/tickets/:ticketId/print", requireAuth, txRoute(getTicketPrintController));
 
 /**
  * Public, no requireAuth (spec: ticketing/ticket - "Tickets for a paid

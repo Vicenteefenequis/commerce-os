@@ -8,6 +8,7 @@ function serializeSummary(summary: Awaited<ReturnType<GetDashboardSummaryUseCase
     sales: summary.sales,
     orders: summary.orders,
     visitors: summary.visitors,
+    channels: summary.channels,
   };
 }
 

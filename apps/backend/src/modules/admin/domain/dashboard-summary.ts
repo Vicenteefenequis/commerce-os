@@ -1,4 +1,4 @@
-import type { OrderStatus } from "../../commerce/domain/order.entity.js";
+import type { OrderChannel, OrderStatus } from "../../commerce/domain/order.entity.js";
 
 /** GMV-counted statuses (spec: admin/dashboard - "Summary reports sales figures"). */
 export const GMV_ORDER_STATUSES: OrderStatus[] = ["paid", "fulfilled", "partially_refunded", "refunded"];
@@ -8,6 +8,13 @@ export interface DashboardSummaryQuery {
   venueId?: string;
   from: Date;
   to: Date;
+}
+
+/** spec: admin/dashboard - "Summary reports sales figures by channel". */
+export interface DashboardChannelBreakdown {
+  gmvCents: number;
+  orderCount: number;
+  ticketCount: number;
 }
 
 export interface DashboardSummary {
@@ -21,6 +28,7 @@ export interface DashboardSummary {
   visitors: {
     authorizedCount: number;
   };
+  channels: Record<OrderChannel, DashboardChannelBreakdown>;
 }
 
 export interface DashboardSummaryRepositoryPort {

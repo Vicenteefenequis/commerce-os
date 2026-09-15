@@ -7,19 +7,21 @@ export interface OrderSummary {
   id: string;
   venueId: string;
   status: string;
+  channel: string;
   totalCents: number;
 }
 
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; customer?: string; status?: string }>;
+  searchParams: Promise<{ id?: string; customer?: string; status?: string; channel?: string }>;
 }) {
   const filters = await searchParams;
   const query = new URLSearchParams();
   if (filters.id) query.set("id", filters.id);
   if (filters.customer) query.set("customer", filters.customer);
   if (filters.status) query.set("status", filters.status);
+  if (filters.channel) query.set("channel", filters.channel);
   const queryString = query.toString();
 
   const response = await backendFetch(`/orders${queryString ? `?${queryString}` : ""}`);

@@ -10,6 +10,7 @@ import type {
 import { ResolveCustomerUseCase } from "../../customer/application/resolve-customer.usecase.js";
 import type { CustomerRepositoryPort } from "../../customer/domain/ports.js";
 import { Order, OrderLine } from "../domain/order.entity.js";
+import type { OrderChannel } from "../domain/order.entity.js";
 import { orderCreatedEvent } from "../domain/events.js";
 import type { OrderRepositoryPort } from "../domain/ports.js";
 import { EmptyCartError, VariantNotFoundError } from "./order-errors.js";
@@ -47,6 +48,13 @@ export interface CreateOrderInput {
    * a concept here: this use case always receives a real users.id.
    */
   actorUserId: string;
+  /**
+   * Which channel created this Order (spec: commerce/order - "Order
+   * records its sales channel"). Defaults to `storefront` so every
+   * existing caller (checkout) is unaffected; `admin/counter-sale` passes
+   * `counter` explicitly.
+   */
+  channel?: OrderChannel;
 }
 
 /**
@@ -131,6 +139,8 @@ export class CreateOrderUseCase {
       });
     }
 
+    const channel: OrderChannel = input.channel ?? "storefront";
+
     // Validate shape via the domain entity before persisting (fail fast, same pattern as CreateProductUseCase).
     Order.create({
       id: randomUUID(),
@@ -139,6 +149,7 @@ export class CreateOrderUseCase {
       customerId: customer.id,
       status: "draft",
       idempotencyKey: input.idempotencyKey,
+      channel,
       lines: lineInputs.map((l) =>
         OrderLine.create({
           id: l.id,
@@ -159,6 +170,7 @@ export class CreateOrderUseCase {
       venueId: input.venueId,
       customerId: customer.id,
       idempotencyKey: input.idempotencyKey,
+      channel,
       lines: lineInputs,
     });
 

@@ -73,3 +73,41 @@ export async function getTicketQrCodeController(req: Request, trx: Trx): Promise
   const png = await renderTicketQrCodePng(ticket.code);
   return { status: 200, headers: { "content-type": "image/png" }, body: png };
 }
+
+/**
+ * spec: ticketing/ticket-print - "Ticket print view is isolated by
+ * tenant". Unlike the account-less routes above, this requires an
+ * authenticated admin session and resolves tenantId only from that
+ * session - never from the request - so a Ticket from another
+ * Organization is denied rather than resolved via a caller-supplied
+ * tenantId. Available for any Ticket regardless of its Order's channel
+ * (spec - "Print view is available for any issued Ticket").
+ */
+export async function getTicketPrintController(req: Request, trx: Trx): Promise<TxResult> {
+  const identity = req.identity;
+  if (!identity) return { status: 401, body: { error: "authentication required" } };
+
+  const { ticketId } = req.params as { ticketId: string };
+  const tenantId = identity.tenantId;
+
+  const ticket = await new KyselyTicketRepository(trx).findById(tenantId, ticketId);
+  if (!ticket) return { status: 404, body: { error: "ticket not found" } };
+
+  const entitlement = await new KyselyEntitlementRepository(trx).findById(tenantId, ticket.entitlementId);
+  if (!entitlement) return { status: 404, body: { error: "ticket not found" } };
+
+  const useCase = new ListOrderTicketsUseCase(
+    new KyselyEntitlementRepository(trx),
+    new KyselyTicketRepository(trx),
+    new KyselyOrderRepository(trx),
+    new KyselyOrganizationRepository(trx),
+    new KyselyProductRepository(trx),
+    new KyselyCustomerRepository(trx),
+    new KyselyReservationValidityLookup(trx),
+  );
+  const tickets = await useCase.execute({ tenantId, orderId: entitlement.orderId });
+  const context = tickets.find((t) => t.ticket.id === ticketId);
+  if (!context) return { status: 404, body: { error: "ticket not found" } };
+
+  return { status: 200, body: serializeTicket(context) };
+}

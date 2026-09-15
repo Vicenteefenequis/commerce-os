@@ -2,10 +2,17 @@ import { AdminNav } from "@/components/layout/admin-nav";
 import { backendFetch } from "@/lib/backend-fetch";
 import { DashboardContent } from "./dashboard-content";
 
+export interface DashboardChannelBreakdown {
+  gmvCents: number;
+  orderCount: number;
+  ticketCount: number;
+}
+
 export interface DashboardSummary {
   sales: { gmvCents: number; averageOrderValueCents: number };
   orders: { countsByStatus: Record<string, number> };
   visitors: { authorizedCount: number };
+  channels: { storefront: DashboardChannelBreakdown; counter: DashboardChannelBreakdown };
 }
 
 export interface VenueOption {

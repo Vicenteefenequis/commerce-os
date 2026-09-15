@@ -1,14 +1,21 @@
-import type { Payment, PaymentMethod, PaymentStatus } from "./payment.entity.js";
+import type { Payment, PaymentMethod, PaymentProvider, PaymentStatus } from "./payment.entity.js";
 
 export interface CreatePaymentInput {
   id: string;
   tenantId: string;
   orderId: string;
-  provider: "stripe";
+  provider: PaymentProvider;
   providerPaymentId: string;
   method: PaymentMethod;
   amountCents: number;
   currency: string;
+  /**
+   * Initial status. Defaults to `pending` (the Pix/card path, awaiting
+   * Payment Provider confirmation). A `cash` Payment is created directly
+   * as `succeeded` (spec: payments/payment - "Payment lifecycle states" -
+   * "New cash payment starts as succeeded").
+   */
+  status?: PaymentStatus;
 }
 
 export interface PaymentRepositoryPort {

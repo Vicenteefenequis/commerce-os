@@ -10,7 +10,7 @@ import { FulfillOrderUseCase } from "../application/fulfill-order.usecase.js";
 import { TransitionOrderStatusUseCase } from "../application/transition-order-status.usecase.js";
 import { InvalidOrderTransitionError, OrderNotFoundError } from "../application/order-errors.js";
 import { InvalidReservationTransitionError, ReservationNotFoundError } from "../../capacity/application/reservation-errors.js";
-import type { Order, OrderStatus } from "../domain/order.entity.js";
+import type { Order, OrderChannel, OrderStatus } from "../domain/order.entity.js";
 import type { OrderListFilters } from "../domain/ports.js";
 import { KyselyOrderRepository } from "./order-repository.kysely.js";
 import { ensureCheckoutSystemUserId } from "./system-user.kysely.js";
@@ -30,6 +30,12 @@ function isOrderStatus(value: unknown): value is OrderStatus {
   return typeof value === "string" && (ORDER_STATUSES as string[]).includes(value);
 }
 
+const ORDER_CHANNELS: OrderChannel[] = ["storefront", "counter"];
+
+function isOrderChannel(value: unknown): value is OrderChannel {
+  return typeof value === "string" && (ORDER_CHANNELS as string[]).includes(value);
+}
+
 function serializePayment(payment: Payment) {
   return {
     id: payment.id,
@@ -45,6 +51,7 @@ function serializeOrder(order: Order, payment?: Payment | null) {
     id: order.id,
     venueId: order.venueId,
     status: order.status,
+    channel: order.channel,
     totalCents: order.totalCents,
     lines: order.lines.map((l) => ({
       id: l.id,
@@ -68,15 +75,24 @@ export async function listOrdersController(req: Request, trx: Trx): Promise<TxRe
   const identity = req.identity;
   if (!identity) return { status: 401, body: { error: "authentication required" } };
 
-  const { id, customer, status } = req.query as { id?: string; customer?: string; status?: string };
+  const { id, customer, status, channel } = req.query as {
+    id?: string;
+    customer?: string;
+    status?: string;
+    channel?: string;
+  };
   if (status !== undefined && !isOrderStatus(status)) {
     return { status: 400, body: { error: "invalid status filter" } };
+  }
+  if (channel !== undefined && !isOrderChannel(channel)) {
+    return { status: 400, body: { error: "invalid channel filter" } };
   }
 
   const filters: OrderListFilters = {
     ...(id ? { orderId: id } : {}),
     ...(customer ? { customerQuery: customer } : {}),
     ...(status ? { status } : {}),
+    ...(channel ? { channel } : {}),
   };
 
   const orders = await new KyselyOrderRepository(trx).findAllByTenant(identity.tenantId, filters);
