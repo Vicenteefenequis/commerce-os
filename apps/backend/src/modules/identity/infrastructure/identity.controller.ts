@@ -45,7 +45,7 @@ export async function loginController(req: Request, trx: Trx): Promise<TxResult>
 }
 
 export async function meController(req: Request, trx: Trx): Promise<TxResult> {
-  const { tenantId, userId, roles } = req.identity!;
+  const { tenantId, userId, roles, venueIds } = req.identity!;
 
   const [user, organization] = await Promise.all([
     new KyselyUserRepository(trx).findById(userId),
@@ -58,6 +58,7 @@ export async function meController(req: Request, trx: Trx): Promise<TxResult> {
       tenantId,
       userId,
       roles,
+      venueIds,
       email: user?.email ?? null,
       organizationName: organization?.name ?? null,
     },

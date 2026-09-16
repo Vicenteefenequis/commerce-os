@@ -19,6 +19,7 @@ import { ticketRouter } from "../modules/ticketing/infrastructure/ticket.routes.
 import { dashboardRouter } from "../modules/admin/infrastructure/dashboard.routes.js";
 import { counterSaleRouter } from "../modules/admin/infrastructure/counter-sale.routes.js";
 import { storefrontRouter } from "../modules/storefront/infrastructure/storefront.routes.js";
+import { userManagementRouter } from "../modules/user-management/infrastructure/user-management.routes.js";
 
 export function createApp() {
   const app = express();
@@ -58,6 +59,7 @@ export function createApp() {
   app.use(dashboardRouter);
   app.use(counterSaleRouter);
   app.use(storefrontRouter);
+  app.use(userManagementRouter);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error(err);

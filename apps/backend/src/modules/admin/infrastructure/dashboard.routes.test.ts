@@ -5,6 +5,7 @@ import request from "supertest";
 import { createApp } from "../../../http/app.js";
 import { db } from "../../../db/kysely.js";
 import { sessionCookieHeader } from "../../identity/infrastructure/cookie.js";
+import type { Role } from "../../authorization/domain/role.js";
 
 /**
  * spec: admin/dashboard - tenant/venue/period-scoped sales, order, and
@@ -125,7 +126,7 @@ async function seedScanAttempt(
     .execute();
 }
 
-async function seedAuthenticatedStaff(tenantId: string) {
+async function seedAuthenticatedStaff(tenantId: string, role: Role = "admin", venueId: string | null = null) {
   const userId = randomUUID();
   await db
     .insertInto("users")
@@ -133,7 +134,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "admin" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -308,5 +309,36 @@ describe.skipIf(!dbReachable)("GET /dashboard/summary (live Postgres)", () => {
     const app = createApp();
     const res = await request(app).get("/dashboard/summary").set("Cookie", cookie);
     expect(res.status).toBe(400);
+  });
+
+  it.each<Role>(["gerente", "vendedor", "validador"])(
+    "denies a %s (spec: Dashboard access is restricted to the Admin role)",
+    async (role) => {
+      const tenantId = randomUUID();
+      const venueId = randomUUID();
+      await db.insertInto("organizations").values({ id: tenantId, name: "Zoo", slug: tenantId }).execute();
+      await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+      await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
+      const cookie = await seedAuthenticatedStaff(tenantId, role, venueId);
+
+      const app = createApp();
+      const res = await request(app)
+        .get("/dashboard/summary?from=2026-01-01&to=2026-01-02")
+        .set("Cookie", cookie);
+      expect(res.status).toBe(403);
+    },
+  );
+
+  it("allows an Admin request (spec: Admin request is allowed)", async () => {
+    const tenantId = randomUUID();
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    const cookie = await seedAuthenticatedStaff(tenantId, "admin");
+
+    const app = createApp();
+    const res = await request(app)
+      .get("/dashboard/summary?from=2026-01-01&to=2026-01-02")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
   });
 });

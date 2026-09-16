@@ -5,6 +5,7 @@ import request from "supertest";
 import { createApp } from "../../../http/app.js";
 import { db } from "../../../db/kysely.js";
 import { sessionCookieHeader } from "../../identity/infrastructure/cookie.js";
+import type { Role } from "../../authorization/domain/role.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { KyselyProductRepository } from "../../catalog/infrastructure/product-repository.kysely.js";
 import { KyselyResourceRepository } from "../../capacity/infrastructure/resource-repository.kysely.js";
@@ -82,7 +83,7 @@ async function seedOrder(
   });
 }
 
-async function seedAuthenticatedStaff(tenantId: string) {
+async function seedAuthenticatedStaff(tenantId: string, role: Role = "admin", venueId: string | null = null) {
   const userId = randomUUID();
   await db
     .insertInto("users")
@@ -90,7 +91,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "admin" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -216,5 +217,49 @@ describe.skipIf(!dbReachable)("GET /orders (live Postgres)", () => {
 
     const invalidChannel = await request(app).get("/orders?channel=bogus").set("Cookie", cookie);
     expect(invalidChannel.status).toBe(400);
+  });
+
+  it("scopes a Gerente's order list to their assigned Venue and omits monetary fields (spec: Gerente order retrieval omits monetary fields / Gerente order access is scoped to their assigned Venue)", async () => {
+    const tenantId = randomUUID();
+    const venueAId = randomUUID();
+    const venueBId = randomUUID();
+
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Gerente", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db.insertInto("venues").values([
+      { id: venueAId, tenant_id: tenantId, name: "Unidade A", slug: venueAId },
+      { id: venueBId, tenant_id: tenantId, name: "Unidade B", slug: venueBId },
+    ]).execute();
+
+    const orderA = await seedOrder(tenantId, venueAId, "Ingresso A");
+    const orderB = await seedOrder(tenantId, venueBId, "Ingresso B");
+
+    const cookie = await seedAuthenticatedStaff(tenantId, "gerente", venueAId);
+    const app = createApp();
+
+    const res = await request(app).get("/orders").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+
+    const orders = res.body.orders as Array<Record<string, unknown>>;
+    expect(orders.map((o) => o.id)).toEqual([orderA.id]);
+    expect(orders.map((o) => o.id)).not.toContain(orderB.id);
+    expect(orders[0]).not.toHaveProperty("totalCents");
+    expect((orders[0]!.lines as Array<Record<string, unknown>>)[0]).not.toHaveProperty("unitPriceCents");
+    expect(orders[0]).toHaveProperty("status");
+  });
+
+  it("does not redact monetary fields for an Admin", async () => {
+    const tenantId = randomUUID();
+    const venueId = randomUUID();
+    await db.insertInto("organizations").values({ id: tenantId, name: "Zoo Admin Money", slug: tenantId }).execute();
+    await sql`select set_config('app.tenant_id', ${tenantId}, false)`.execute(db);
+    await db.insertInto("venues").values({ id: venueId, tenant_id: tenantId, name: "Unidade", slug: venueId }).execute();
+
+    await seedOrder(tenantId, venueId, "Ingresso");
+    const cookie = await seedAuthenticatedStaff(tenantId, "admin");
+
+    const res = await request(createApp()).get("/orders").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.orders[0]).toHaveProperty("totalCents");
   });
 });

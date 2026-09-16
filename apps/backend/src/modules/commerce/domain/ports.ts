@@ -27,6 +27,12 @@ export interface OrderListFilters {
   status?: OrderStatus;
   /** spec: commerce/order - "Orders can be filtered by sales channel". */
   channel?: OrderChannel;
+  /**
+   * openspec change add-venue-scoped-user-roles, spec: commerce/order -
+   * "Gerente order access is scoped to their assigned Venue". Omitted
+   * (not merely empty) for a caller with no Venue restriction (Admin).
+   */
+  venueIds?: string[];
 }
 
 export interface OrderRepositoryPort {

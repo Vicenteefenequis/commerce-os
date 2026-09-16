@@ -96,6 +96,9 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     if (filters?.channel) {
       query = query.where("orders.channel", "=", filters.channel);
     }
+    if (filters?.venueIds) {
+      query = query.where("orders.venue_id", "in", filters.venueIds);
+    }
     if (filters?.customerQuery) {
       const pattern = `%${filters.customerQuery}%`;
       query = query.where((eb) =>

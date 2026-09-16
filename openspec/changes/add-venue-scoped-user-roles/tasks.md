@@ -20,27 +20,42 @@
 
 ## 3. New capability: foundation/user-management
 
-- [ ] 3.1 Add domain types/ports for listing an Organization's users with their role assignments, and creating/revoking a role assignment (role + optional Venue), gated by `user:manage`; verify unit tests for the validation rules in `specs/foundation/user-management/spec.md` (Venue required for non-Admin roles, rejected for Admin, cross-org Venue rejected).
-- [ ] 3.2 Implement the Kysely repository and Express routes for list/create/revoke, wired through `requirePermission("user:manage")`; verify route-level tests for 401 (no session), 403 (non-admin), and success paths.
-- [ ] 3.3 Verify revocation takes effect immediately: an integration test that revokes an assignment mid-session and confirms the next request using that permission is denied without requiring logout.
+- [x] 3.1 Add domain types/ports for listing an Organization's users with their role assignments, and creating/revoking a role assignment (role + optional Venue), gated by `user:manage`; verify unit tests for the validation rules in `specs/foundation/user-management/spec.md` (Venue required for non-Admin roles, rejected for Admin, cross-org Venue rejected).
+- [x] 3.2 Implement the Kysely repository and Express routes for list/create/revoke, wired through `requirePermission("user:manage")`; verify route-level tests for 401 (no session), 403 (non-admin), and success paths.
+- [x] 3.3 Verify revocation takes effect immediately: an integration test that revokes an assignment mid-session and confirms the next request using that permission is denied without requiring logout.
+
+  New module `apps/backend/src/modules/user-management/` (domain/ports, `CreateRoleAssignmentUseCase`/`ListUsersUseCase`/`RevokeRoleAssignmentUseCase`, Kysely repository, controller, routes at `GET/POST /users`, `POST /users/role-assignments`, `DELETE /users/role-assignments/:id`), registered in `app.ts`. `CreateRoleAssignmentUseCase` covers all 3 spec validation rules with a fake-repository unit test (7 cases); route tests (8 cases) cover 401/403/list/create/reject-without-venue/multi-role-per-user, and the revoke-takes-effect-immediately case: seeds a Validador, confirms `/access/scan` doesn't 403 for them, revokes the assignment via the API, then confirms the very next `/access/scan` call 403s with no session change. All against live Postgres.
 
 ## 4. Admin dashboard gating
 
-- [ ] 4.1 Add a role check to the dashboard summary route (`apps/backend/src/modules/admin/infrastructure/dashboard.routes.ts`) denying any identity without the Admin role; verify with a route test asserting Gerente/Vendedor/Validador get 403.
-- [ ] 4.2 Update the post-login redirect to send non-Admin roles to the first screen their role permits instead of the Dashboard; verify with a frontend test or manual walkthrough per role.
+- [x] 4.1 Add a role check to the dashboard summary route (`apps/backend/src/modules/admin/infrastructure/dashboard.routes.ts`) denying any identity without the Admin role; verify with a route test asserting Gerente/Vendedor/Validador get 403.
+
+  New `requireRole` middleware (design.md D5 - direct role check, not a Permission) replaces the `order:manage` gate. Route tests: 3 denied roles (403 each) + Admin allowed (200), plus the pre-existing GMV/channel/tenant-isolation tests still pass with `admin` as the seeded role.
+
+- [x] 4.2 Update the post-login redirect to send non-Admin roles to the first screen their role permits instead of the Dashboard; verify with a frontend test or manual walkthrough per role.
+
+  `apps/web/lib/roles.ts` is the single source of truth for per-role nav links (also used by task 8.1); `login/actions.ts` fetches `/auth/me` right after login (now returning `venueIds` too, needed for task 8.4) and redirects via `firstAllowedPath`. Manual walkthrough deferred to task 10.2 alongside the other three roles' full walkthrough.
 
 ## 5. Counter sale gating
 
-- [ ] 5.1 Update `counter-sale.routes.ts`/its permission check to require Admin or Vendedor scoped to the sale's Venue instead of "any authenticated session"; verify route tests for Admin (any Venue), Vendedor (own Venue), Vendedor (other Venue → denied), Gerente/Validador (denied).
+- [x] 5.1 Update `counter-sale.routes.ts`/its permission check to require Admin or Vendedor scoped to the sale's Venue instead of "any authenticated session"; verify route tests for Admin (any Venue), Vendedor (own Venue), Vendedor (other Venue → denied), Gerente/Validador (denied).
+
+  Added the `counter-sale:create` permission (Admin + Vendedor) and gate the route with `requirePermission("counter-sale:create", resolveSaleVenueId)`, resolving the sale's Venue from the request body so a Vendedor scoped to a different Venue gets an explicit 403 rather than a downstream failure. All 5 required cases covered, plus the pre-existing walk-in-sale/ticketing/capacity tests still pass with the seeded Vendedor now Venue-scoped.
 
 ## 6. Scan gating
 
-- [ ] 6.1 Update `scan.routes.ts` to check `entitlement:consume` against the scan's Venue via the extended `PermissionCheckUseCase`; verify route tests for Admin (any Venue), Validador (own Venue), Validador (other Venue → denied).
+- [x] 6.1 Update `scan.routes.ts` to check `entitlement:consume` against the scan's Venue via the extended `PermissionCheckUseCase`; verify route tests for Admin (any Venue), Validador (own Venue), Validador (other Venue → denied).
+
+  Gated with `requirePermission("entitlement:consume", resolveScanVenueId)`. Two pre-existing tests needed adjusting because they scanned across two Venues with one operator that (correctly, under the new model) can no longer be scoped to both by accident: "wrong venue" and "records every attempt" now assign the operator to whichever Venue(s) they're legitimately meant to be scanning at (a Validador can hold the same role for more than one Venue - multiple `role_assignments` rows, per spec), while the *Order*'s Venue is what still produces the `wrong_venue` outcome - keeping the distinction between "not permitted to scan here" (403, new) and "permitted to scan here, but this Ticket was sold for a different Venue" (200/`wrong_venue`, pre-existing) intact. One test's expected status changed from 400 to 403 (a cross-org `venueId` is now caught earlier, by the Venue-scope check, before the use case's own tenant validation ever runs) - documented inline. Full backend suite: 424/424 passing.
 
 ## 7. Order retrieval: redaction and Venue scope
 
-- [ ] 7.1 Add the shared Order response serializer that strips monetary fields (line prices, totals, Payment amount/refunded amount) when the caller's role is Gerente, and reuse it in both the list and detail routes; verify tests asserting Gerente responses omit those fields while Admin responses don't.
-- [ ] 7.2 Ensure Gerente order list/detail queries are scoped by `app.venue_ids` (should fall out of task 1.4/2.4 automatically since Orders are Venue-owned); verify with a test that a Gerente scoped to Venue A never sees an Order belonging to Venue B, including a direct detail lookup by id.
+- [x] 7.1 Add the shared Order response serializer that strips monetary fields (line prices, totals, Payment amount/refunded amount) when the caller's role is Gerente, and reuse it in both the list and detail routes; verify tests asserting Gerente responses omit those fields while Admin responses don't.
+- [x] 7.2 Ensure Gerente order list/detail queries are scoped by `app.venue_ids` (should fall out of task 1.4/2.4 automatically since Orders are Venue-owned); verify with a test that a Gerente scoped to Venue A never sees an Order belonging to Venue B, including a direct detail lookup by id.
+
+  7.1: `redactsMoneyFor(identity)` in `order.controller.ts` (Gerente without also Admin) strips `totalCents`/line `unitPriceCents`/Payment `amountCents`+`refundedAmountCents`, reused across list, detail, submit-for-payment (never redacted - public/account-less path), and fulfill.
+
+  7.2: went with an explicit application-layer Venue filter rather than relying on RLS alone - `OrderListFilters.venueIds` + a `WHERE venue_id IN (...)` clause in the repository for list, and an explicit venue-membership check (404 if the Gerente's `venueIds` doesn't include the order's) for detail. This is a deliberate strengthening beyond what task 2.4's note called "would fall out automatically": RLS alone can't be exercised by this suite's live-Postgres tests (owner-credentialed, bypasses RLS - see task 2.4's note), so an app-layer filter was added for both correct behavior and real regression coverage; RLS remains the defense-in-depth backstop underneath it. 4 new tests (Gerente list scoped + redacted, Admin list unredacted, Gerente detail redacted, Gerente detail denied for a different Venue). Full suite: 428/428.
 
 ## 8. Frontend
 

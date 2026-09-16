@@ -78,7 +78,7 @@ async function seedTenant(name: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "vendedor" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "vendedor", venue_id: venueId })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -222,4 +222,73 @@ describe.skipIf(!dbReachable)("POST /counter-sales (live Postgres)", () => {
     const payments = await db.selectFrom("payments").selectAll().where("tenant_id", "=", tenantId).execute();
     expect(payments).toHaveLength(0);
   });
+
+  it("allows an Admin to create a counter sale for any Venue (spec: Admin session can create a counter sale for any Venue)", async () => {
+    const { tenantId, venueId, freeVariantId } = await seedTenant("Zoo Counter Admin");
+    const adminUserId = randomUUID();
+    await db
+      .insertInto("users")
+      .values({ id: adminUserId, tenant_id: tenantId, email: `admin-${adminUserId}@example.com`, password_hash: "x" })
+      .execute();
+    await db
+      .insertInto("role_assignments")
+      .values({ id: randomUUID(), tenant_id: tenantId, user_id: adminUserId, role: "admin" })
+      .execute();
+    const session = await db
+      .insertInto("sessions")
+      .values({ id: randomUUID(), tenant_id: tenantId, user_id: adminUserId, expires_at: new Date(Date.now() + 900_000) })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const res = await request(createApp())
+      .post("/counter-sales")
+      .set("Cookie", sessionCookieHeader(session.id))
+      .send({ venueId, lines: [{ variantId: freeVariantId, quantity: 1 }] });
+
+    expect(res.status).toBe(201);
+  });
+
+  it("denies a Vendedor scoped to a different Venue (spec: Vendedor session is denied for a Venue they are not assigned to)", async () => {
+    const { tenantId, freeVariantId, cookie } = await seedTenant("Zoo Counter Wrong Venue");
+    const otherVenueId = randomUUID();
+    await db
+      .insertInto("venues")
+      .values({ id: otherVenueId, tenant_id: tenantId, name: "Outra Unidade", slug: otherVenueId })
+      .execute();
+
+    const res = await request(createApp())
+      .post("/counter-sales")
+      .set("Cookie", cookie)
+      .send({ venueId: otherVenueId, lines: [{ variantId: freeVariantId, quantity: 1 }] });
+
+    expect(res.status).toBe(403);
+  });
+
+  it.each(["gerente", "validador"] as const)(
+    "denies a %s session (spec: Gerente or Validador session is denied)",
+    async (role) => {
+      const { tenantId, venueId, freeVariantId } = await seedTenant(`Zoo Counter Denied ${role}`);
+      const userId = randomUUID();
+      await db
+        .insertInto("users")
+        .values({ id: userId, tenant_id: tenantId, email: `denied-${userId}@example.com`, password_hash: "x" })
+        .execute();
+      await db
+        .insertInto("role_assignments")
+        .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
+        .execute();
+      const session = await db
+        .insertInto("sessions")
+        .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, expires_at: new Date(Date.now() + 900_000) })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      const res = await request(createApp())
+        .post("/counter-sales")
+        .set("Cookie", sessionCookieHeader(session.id))
+        .send({ venueId, lines: [{ variantId: freeVariantId, quantity: 1 }] });
+
+      expect(res.status).toBe(403);
+    },
+  );
 });
