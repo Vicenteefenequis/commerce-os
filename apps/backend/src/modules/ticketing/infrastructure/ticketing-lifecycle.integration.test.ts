@@ -229,7 +229,7 @@ describe.skipIf(!dbReachable)("Ticketing lifecycle (live Postgres)", () => {
     await expect(
       db
         .insertInto("tickets")
-        .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlement.id, code: randomUUID() })
+        .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlement.id, venue_id: venueId, code: randomUUID() })
         .execute(),
     ).rejects.toThrow();
   });

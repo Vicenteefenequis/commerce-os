@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import type { Trx, TxResult } from "../../../http/tx-route.js";
+import type { Identity } from "../../../http/identity.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { KyselyReservationRepository } from "../../capacity/infrastructure/reservation-repository.kysely.js";
 import { KyselyCapacityCommitmentRepository } from "../../capacity/infrastructure/capacity-commitment-repository.kysely.js";
@@ -36,32 +37,42 @@ function isOrderChannel(value: unknown): value is OrderChannel {
   return typeof value === "string" && (ORDER_CHANNELS as string[]).includes(value);
 }
 
-function serializePayment(payment: Payment) {
+/**
+ * openspec change add-venue-scoped-user-roles, spec: commerce/order -
+ * "Gerente order retrieval omits monetary fields": a Gerente (and not
+ * also an Admin - Admin always sees full data) never sees line prices,
+ * order totals, or Payment amounts. Status and every other field is
+ * unaffected.
+ */
+function redactsMoneyFor(identity: Identity): boolean {
+  return identity.roles.includes("gerente") && !identity.roles.includes("admin");
+}
+
+function serializePayment(payment: Payment, redactMoney: boolean) {
   return {
     id: payment.id,
     status: payment.status,
     method: payment.method,
-    amountCents: payment.amountCents,
-    refundedAmountCents: payment.refundedAmountCents,
+    ...(redactMoney ? {} : { amountCents: payment.amountCents, refundedAmountCents: payment.refundedAmountCents }),
   };
 }
 
-function serializeOrder(order: Order, payment?: Payment | null) {
+function serializeOrder(order: Order, payment: Payment | null | undefined, redactMoney: boolean) {
   return {
     id: order.id,
     venueId: order.venueId,
     status: order.status,
     channel: order.channel,
-    totalCents: order.totalCents,
+    ...(redactMoney ? {} : { totalCents: order.totalCents }),
     lines: order.lines.map((l) => ({
       id: l.id,
       variantId: l.variantId,
       name: l.name,
-      unitPriceCents: l.unitPriceCents,
+      ...(redactMoney ? {} : { unitPriceCents: l.unitPriceCents }),
       quantity: l.quantity,
       reservationId: l.reservationId,
     })),
-    ...(payment !== undefined ? { payment: payment ? serializePayment(payment) : null } : {}),
+    ...(payment !== undefined ? { payment: payment ? serializePayment(payment, redactMoney) : null } : {}),
   };
 }
 
@@ -93,10 +104,12 @@ export async function listOrdersController(req: Request, trx: Trx): Promise<TxRe
     ...(customer ? { customerQuery: customer } : {}),
     ...(status ? { status } : {}),
     ...(channel ? { channel } : {}),
+    ...(identity.venueIds !== "all" ? { venueIds: identity.venueIds } : {}),
   };
 
   const orders = await new KyselyOrderRepository(trx).findAllByTenant(identity.tenantId, filters);
-  return { status: 200, body: { orders: orders.map((o) => serializeOrder(o)) } };
+  const redactMoney = redactsMoneyFor(identity);
+  return { status: 200, body: { orders: orders.map((o) => serializeOrder(o, undefined, redactMoney)) } };
 }
 
 export async function getOrderController(req: Request, trx: Trx): Promise<TxResult> {
@@ -106,10 +119,13 @@ export async function getOrderController(req: Request, trx: Trx): Promise<TxResu
   const { id } = req.params as { id: string };
   const order = await new KyselyOrderRepository(trx).findById(identity.tenantId, id);
   if (!order) return { status: 404, body: { error: "order not found" } };
+  if (identity.venueIds !== "all" && !identity.venueIds.includes(order.venueId)) {
+    return { status: 404, body: { error: "order not found" } };
+  }
 
   const payment = await new KyselyPaymentRepository(trx).findMostRecentByOrderId(identity.tenantId, id);
 
-  return { status: 200, body: serializeOrder(order, payment) };
+  return { status: 200, body: serializeOrder(order, payment, redactsMoneyFor(identity)) };
 }
 
 /**
@@ -142,7 +158,7 @@ export async function submitOrderForPaymentController(req: Request, trx: Trx): P
 
   const order = await new KyselyOrderRepository(trx).findById(tenantId, id);
   if (!order) return { status: 404, body: { error: "order not found" } };
-  return { status: 200, body: serializeOrder(order) };
+  return { status: 200, body: serializeOrder(order, undefined, false) };
 }
 
 export async function cancelOrderController(req: Request, trx: Trx): Promise<TxResult> {
@@ -191,5 +207,5 @@ export async function fulfillOrderController(req: Request, trx: Trx): Promise<Tx
 
   const order = await new KyselyOrderRepository(trx).findById(identity.tenantId, id);
   if (!order) return { status: 404, body: { error: "order not found" } };
-  return { status: 200, body: serializeOrder(order) };
+  return { status: 200, body: serializeOrder(order, undefined, redactsMoneyFor(identity)) };
 }

@@ -58,10 +58,16 @@ export function OrderDetailContent({ order }: { order: OrderDetail }) {
   const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<ActionKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // openspec change add-venue-scoped-user-roles: absent for a Gerente
+  // session (backend redaction) - hide monetary columns entirely.
+  const showMoney = order.totalCents !== undefined;
 
   const canCancel = order.status === "draft" || order.status === "awaiting_payment";
   const canFulfill = order.status === "paid";
-  const remainingRefundableCents = order.payment ? order.payment.amountCents - order.payment.refundedAmountCents : 0;
+  const remainingRefundableCents =
+    order.payment?.amountCents !== undefined && order.payment.refundedAmountCents !== undefined
+      ? order.payment.amountCents - order.payment.refundedAmountCents
+      : 0;
   const canRefund =
     order.payment !== null &&
     (order.payment.status === "succeeded" || order.payment.status === "partially_refunded") &&
@@ -97,23 +103,30 @@ export function OrderDetailContent({ order }: { order: OrderDetail }) {
           <TableHead>
             <TableRow>
               <TableHeaderCell>Item</TableHeaderCell>
-              <TableHeaderCell>Preço unitário</TableHeaderCell>
+              {showMoney && <TableHeaderCell>Preço unitário</TableHeaderCell>}
               <TableHeaderCell>Quantidade</TableHeaderCell>
-              <TableHeaderCell>Total</TableHeaderCell>
+              {showMoney && <TableHeaderCell>Total</TableHeaderCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {order.lines.map((line) => (
               <TableRow key={line.id}>
                 <TableCell>{line.name}</TableCell>
-                <TableCell>R$ {(line.unitPriceCents / 100).toFixed(2)}</TableCell>
-                <TableCell>{line.quantity}</TableCell>
-                <TableCell>R$ {((line.unitPriceCents * line.quantity) / 100).toFixed(2)}</TableCell>
+                {showMoney && line.unitPriceCents !== undefined && (
+                  <>
+                    <TableCell>R$ {(line.unitPriceCents / 100).toFixed(2)}</TableCell>
+                    <TableCell>{line.quantity}</TableCell>
+                    <TableCell>R$ {((line.unitPriceCents * line.quantity) / 100).toFixed(2)}</TableCell>
+                  </>
+                )}
+                {!showMoney && <TableCell>{line.quantity}</TableCell>}
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        <p className="text-right text-sm font-semibold text-fg">Total: R$ {(order.totalCents / 100).toFixed(2)}</p>
+        {showMoney && (
+          <p className="text-right text-sm font-semibold text-fg">Total: R$ {(order.totalCents! / 100).toFixed(2)}</p>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">
@@ -127,8 +140,10 @@ export function OrderDetailContent({ order }: { order: OrderDetail }) {
               </Badge>
             </div>
             <p className="text-fg-muted">Método: {PAYMENT_METHOD_LABELS[order.payment.method] ?? order.payment.method}</p>
-            <p className="text-fg-muted">Valor: R$ {(order.payment.amountCents / 100).toFixed(2)}</p>
-            {order.payment.refundedAmountCents > 0 && (
+            {order.payment.amountCents !== undefined && (
+              <p className="text-fg-muted">Valor: R$ {(order.payment.amountCents / 100).toFixed(2)}</p>
+            )}
+            {order.payment.refundedAmountCents !== undefined && order.payment.refundedAmountCents > 0 && (
               <p className="text-fg-muted">Reembolsado: R$ {(order.payment.refundedAmountCents / 100).toFixed(2)}</p>
             )}
           </div>

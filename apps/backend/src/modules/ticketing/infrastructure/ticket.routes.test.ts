@@ -62,7 +62,7 @@ async function seedOrderWithTickets(name: string, codeLabels: string[]) {
     .execute();
   await db
     .insertInto("product_variants")
-    .values({ id: variantId, tenant_id: tenantId, product_id: productId, name: "Único", price_cents: 2000 })
+    .values({ id: variantId, tenant_id: tenantId, product_id: productId, venue_id: venueId, name: "Único", price_cents: 2000 })
     .execute();
   await db
     .insertInto("orders")
@@ -74,6 +74,7 @@ async function seedOrderWithTickets(name: string, codeLabels: string[]) {
       id: orderLineId,
       tenant_id: tenantId,
       order_id: orderId,
+      venue_id: venueId,
       variant_id: variantId,
       name: "Ingresso",
       unit_price_cents: 2000,
@@ -93,12 +94,13 @@ async function seedOrderWithTickets(name: string, codeLabels: string[]) {
         order_id: orderId,
         order_line_id: orderLineId,
         customer_id: customerId,
+        venue_id: venueId,
         status: "issued",
       })
       .execute();
     await db
       .insertInto("tickets")
-      .values({ id: ticketId, tenant_id: tenantId, entitlement_id: entitlementId, code })
+      .values({ id: ticketId, tenant_id: tenantId, entitlement_id: entitlementId, venue_id: venueId, code })
       .execute();
     ticketIds.push(ticketId);
   }
@@ -114,7 +116,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "owner" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "admin" })
     .execute();
   const session = await db
     .insertInto("sessions")

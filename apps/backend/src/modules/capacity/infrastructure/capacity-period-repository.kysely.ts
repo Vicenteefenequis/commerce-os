@@ -36,9 +36,17 @@ export class KyselyCapacityPeriodRepository implements CapacityPeriodRepositoryP
     period: string,
     capacity: number,
   ): Promise<void> {
+    const resource = await this.trx
+      .selectFrom("resources")
+      .select("venue_id")
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", resourceId)
+      .executeTakeFirst();
+    if (!resource) throw new ResourceNotFoundError();
+
     await this.trx
       .insertInto("resource_capacity_periods")
-      .values({ tenant_id: tenantId, resource_id: resourceId, period, capacity })
+      .values({ tenant_id: tenantId, resource_id: resourceId, venue_id: resource.venue_id, period, capacity })
       .onConflict((oc) =>
         oc.columns(["resource_id", "period"]).doUpdateSet({ capacity, updated_at: new Date() }),
       )

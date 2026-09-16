@@ -74,6 +74,7 @@ async function seedProduct(
       id: variantId,
       tenant_id: tenantId,
       product_id: productId,
+      venue_id: venueId,
       name: "Único",
       price_cents: 2500,
       resource_id: overrides.resourceId ?? null,

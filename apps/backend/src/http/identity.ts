@@ -1,16 +1,14 @@
-export type Role =
-  | "owner"
-  | "admin"
-  | "finance"
-  | "sales"
-  | "operator"
-  | "access_operator"
-  | "read_only";
+import type { Role } from "../modules/authorization/domain/role.js";
+import type { VenueScope } from "../modules/authorization/domain/venue-scope.js";
+
+export type { Role };
+export type { VenueScope };
 
 export interface Identity {
   userId: string;
   tenantId: string;
   roles: Role[];
+  venueIds: VenueScope;
 }
 
 declare global {

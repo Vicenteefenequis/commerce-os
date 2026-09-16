@@ -41,7 +41,7 @@ describe("SetConfigurationUseCase", () => {
       tenantId,
       key: "checkout.enabled",
       value: "true",
-      actingRoles: ["owner"],
+      actingRoles: ["admin"],
       actorUserId: randomUUID(),
     });
 
@@ -59,7 +59,7 @@ describe("SetConfigurationUseCase", () => {
         tenantId,
         key: "checkout.enabled",
         value: "true",
-        actingRoles: ["sales"],
+        actingRoles: ["vendedor"],
         actorUserId: randomUUID(),
       }),
     ).rejects.toBeInstanceOf(ConfigurationPermissionDeniedError);

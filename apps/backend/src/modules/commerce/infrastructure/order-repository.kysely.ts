@@ -31,6 +31,7 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
             id: l.id,
             tenant_id: input.tenantId,
             order_id: row.id,
+            venue_id: row.venue_id,
             variant_id: l.variantId,
             name: l.name,
             unit_price_cents: l.unitPriceCents,
@@ -94,6 +95,9 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     }
     if (filters?.channel) {
       query = query.where("orders.channel", "=", filters.channel);
+    }
+    if (filters?.venueIds) {
+      query = query.where("orders.venue_id", "in", filters.venueIds);
     }
     if (filters?.customerQuery) {
       const pattern = `%${filters.customerQuery}%`;
@@ -161,12 +165,20 @@ export class KyselyOrderRepository implements OrderRepositoryPort {
     toStatus: OrderStatus,
     actorUserId: string | null,
   ): Promise<void> {
+    const order = await this.trx
+      .selectFrom("orders")
+      .select("venue_id")
+      .where("tenant_id", "=", tenantId)
+      .where("id", "=", orderId)
+      .executeTakeFirstOrThrow();
+
     await this.trx
       .insertInto("order_status_history")
       .values({
         id: randomUUID(),
         tenant_id: tenantId,
         order_id: orderId,
+        venue_id: order.venue_id,
         from_status: fromStatus,
         to_status: toStatus,
         actor_user_id: actorUserId,

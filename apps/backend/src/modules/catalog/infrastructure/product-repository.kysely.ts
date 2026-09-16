@@ -40,6 +40,7 @@ export class KyselyProductRepository implements ProductRepositoryPort {
             id: v.id,
             tenant_id: input.tenantId,
             product_id: row.id,
+            venue_id: row.venue_id,
             name: v.name,
             price_cents: v.priceCents,
             resource_id: v.resourceId ?? null,

@@ -5,6 +5,7 @@ import request from "supertest";
 import { createApp } from "../../../http/app.js";
 import { db } from "../../../db/kysely.js";
 import { sessionCookieHeader } from "../../identity/infrastructure/cookie.js";
+import type { Role } from "../../authorization/domain/role.js";
 import { OutboxEventPublisher } from "../../../events/outbox-publisher.js";
 import { KyselyProductRepository } from "../../catalog/infrastructure/product-repository.kysely.js";
 import { KyselyResourceRepository } from "../../capacity/infrastructure/resource-repository.kysely.js";
@@ -95,10 +96,10 @@ async function seedTenantWithDraftOrder() {
     });
   });
 
-  return { tenantId, order };
+  return { tenantId, venueId, order };
 }
 
-async function seedAuthenticatedStaff(tenantId: string) {
+async function seedAuthenticatedStaff(tenantId: string, role: Role = "admin", venueId: string | null = null) {
   const userId = randomUUID();
   await db
     .insertInto("users")
@@ -106,7 +107,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "owner" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -161,5 +162,31 @@ describe.skipIf(!dbReachable)("GET /orders/:id (live Postgres)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.payment).toBeNull();
+  });
+
+  it("omits monetary fields for a Gerente scoped to the order's Venue (spec: Gerente retrieves order detail without monetary fields)", async () => {
+    const { tenantId, venueId, order } = await seedTenantWithDraftOrder();
+    const cookie = await seedAuthenticatedStaff(tenantId, "gerente", venueId);
+
+    const res = await request(createApp()).get(`/orders/${order.id}`).set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("totalCents");
+    expect(res.body.lines[0]).not.toHaveProperty("unitPriceCents");
+    expect(res.body.status).toBeDefined();
+  });
+
+  it("denies a Gerente scoped to a different Venue (spec: Gerente is denied detail for an order outside their Venue)", async () => {
+    const { tenantId, order } = await seedTenantWithDraftOrder();
+    const otherVenueId = randomUUID();
+    await db
+      .insertInto("venues")
+      .values({ id: otherVenueId, tenant_id: tenantId, name: "Outra Unidade", slug: otherVenueId })
+      .execute();
+    const cookie = await seedAuthenticatedStaff(tenantId, "gerente", otherVenueId);
+
+    const res = await request(createApp()).get(`/orders/${order.id}`).set("Cookie", cookie);
+
+    expect(res.status).toBe(404);
   });
 });

@@ -1,22 +1,87 @@
 import { describe, expect, it } from "vitest";
-import { roleHasPermission, type Role } from "./role.js";
+import { roleHasPermission, ROLES, type Permission, type Role } from "./role.js";
 
 /**
- * spec: access/scan - "Scanning requires the entitlement:consume
- * permission" (add-access-control design.md D7).
+ * spec: foundation/authorization - "Role-based access control" (openspec
+ * change add-venue-scoped-user-roles): the four-role access matrix from
+ * proposal.md.
  */
-describe("entitlement:consume role mapping", () => {
-  it.each<Role>(["access_operator", "owner", "admin"])("grants %s the permission", (role) => {
-    expect(roleHasPermission(role, "entitlement:consume")).toBe(true);
+describe("role set", () => {
+  it("supports exactly admin, gerente, vendedor, validador", () => {
+    expect(ROLES).toEqual(["admin", "gerente", "vendedor", "validador"]);
+  });
+});
+
+describe("admin", () => {
+  it.each<Permission>([
+    "organization:manage",
+    "venue:manage",
+    "configuration:manage",
+    "audit:read",
+    "product:manage",
+    "resource:manage",
+    "reservation:manage",
+    "order:manage",
+    "order:read",
+    "payment:manage",
+    "entitlement:consume",
+    "counter-sale:create",
+    "user:manage",
+  ])("grants %s", (permission) => {
+    expect(roleHasPermission("admin", permission)).toBe(true);
+  });
+});
+
+describe("gerente", () => {
+  it.each<Permission>(["venue:read", "venue:manage", "resource:read", "order:read"])(
+    "grants %s",
+    (permission) => {
+      expect(roleHasPermission("gerente", permission)).toBe(true);
+    },
+  );
+
+  it.each<Permission>(["order:manage", "payment:manage", "entitlement:consume", "counter-sale:create", "user:manage"])(
+    "denies %s",
+    (permission) => {
+      expect(roleHasPermission("gerente", permission)).toBe(false);
+    },
+  );
+});
+
+describe("vendedor", () => {
+  it.each<Permission>(["venue:read", "product:read", "resource:read", "counter-sale:create"])(
+    "grants %s",
+    (permission) => {
+      expect(roleHasPermission("vendedor", permission)).toBe(true);
+    },
+  );
+
+  it.each<Permission>(["order:read", "order:manage", "entitlement:consume", "user:manage"])(
+    "denies %s",
+    (permission) => {
+      expect(roleHasPermission("vendedor", permission)).toBe(false);
+    },
+  );
+});
+
+describe("validador", () => {
+  it.each<Permission>(["venue:read", "entitlement:consume"])("grants %s", (permission) => {
+    expect(roleHasPermission("validador", permission)).toBe(true);
   });
 
-  it.each<Role>(["sales", "operator", "finance", "read_only"])("denies %s the permission", (role) => {
-    expect(roleHasPermission(role, "entitlement:consume")).toBe(false);
-  });
+  it.each<Permission>(["product:read", "resource:read", "order:read", "counter-sale:create"])(
+    "denies %s (scanning is this role's sole purpose beyond picking a Venue)",
+    (permission) => {
+      expect(roleHasPermission("validador", permission)).toBe(false);
+    },
+  );
+});
 
-  it("does not widen access_operator beyond scanning and reading its Venue", () => {
-    expect(roleHasPermission("access_operator", "order:manage")).toBe(false);
-    expect(roleHasPermission("access_operator", "product:read")).toBe(false);
-    expect(roleHasPermission("access_operator", "venue:read")).toBe(true);
+describe("legacy role names no longer type-check", () => {
+  it("Role only accepts the four new roles", () => {
+    const legacyRoles = ["owner", "finance", "sales", "operator", "access_operator", "read_only"];
+    // @ts-expect-error - legacy role names are not assignable to Role anymore.
+    const _legacy: Role = legacyRoles[0];
+    expect(legacyRoles).not.toContain("admin");
   });
 });

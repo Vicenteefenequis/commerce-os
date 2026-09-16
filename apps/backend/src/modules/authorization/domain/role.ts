@@ -1,12 +1,4 @@
-export const ROLES = [
-  "owner",
-  "admin",
-  "finance",
-  "sales",
-  "operator",
-  "access_operator",
-  "read_only",
-] as const;
+export const ROLES = ["admin", "gerente", "vendedor", "validador"] as const;
 
 export type Role = (typeof ROLES)[number];
 
@@ -24,47 +16,41 @@ export type Permission =
   | "resource:read"
   | "reservation:manage"
   | "order:manage"
+  | "order:read"
   | "payment:manage"
-  | "entitlement:consume";
+  | "entitlement:consume"
+  | "counter-sale:create"
+  | "user:manage";
 
 /**
- * IAM-002: fixed role -> permission mapping for the Foundation phase.
- * Custom/user-defined roles are explicitly out of scope (design.md D8).
+ * openspec change add-venue-scoped-user-roles, proposal.md's access
+ * matrix: replaces the old seven-role IAM-002 mapping with four roles,
+ * each also constrained by Venue scope (see
+ * PermissionCheckUseCase.execute's resourceVenueId check - this table
+ * only decides which Permissions a role can ever hold, not which Venue).
  *
- * product/resource:read are granted to every role that already reads
- * venue (catalog and capacity are read to sell/plan), except
- * access_operator, whose job (PRD persona "Operador de acesso") is
- * scanning tickets, not browsing catalog/capacity. manage is limited to
- * owner/admin, consistent with venue:manage.
- *
- * reservation:manage is limited to owner/admin for this change: the
- * reservation routes are an internal-only surface with no production
- * caller yet (design.md Non-Goals) - Checkout (sales/operator) and
- * Access Control (access_operator) will need it once they call these
- * use cases, which is out of scope here.
- *
- * order:manage (GET/cancel an Order via the internal/admin surface) is
- * likewise limited to owner/admin for the same reason: the public
- * checkout path that actually creates Orders calls CreateOrderUseCase
- * in-process (no permission check needed - CHK-001 is account-less by
- * design), so this permission only gates the internal read/cancel
- * routes added in this change (add-order-checkout tasks.md 4.3).
- *
- * payment:manage gates the refund route only (add-payment design.md -
- * refund is admin-initiated) - creating a Payment, like creating an
- * Order, is a public/guest-callable path with no permission check.
- * Limited to owner/admin, consistent with order:manage.
- *
- * entitlement:consume gates the Access Control scan route, the only path
- * that can consume an Entitlement (add-access-control design.md D7). It
- * goes to access_operator - scanning at the door is that persona's sole
- * purpose - plus owner/admin for support and testing, the same
- * distribution the other manage-type permissions use. Deliberately not
- * granted to sales/operator/finance/read_only: selling or reporting on a
- * ticket must never be able to burn it.
+ * - admin: every permission, unrestricted (proposal - "pode fazer tudo
+ *   que já tem hoje").
+ * - gerente: venue:read/manage (view/edit their Venue's config),
+ *   resource:read ("ver ... recursos"), order:read ("ver pedidos") -
+ *   deliberately not order:manage (cancel/fulfill) or payment:manage,
+ *   neither of which the proposal asked for. Monetary redaction on
+ *   Order reads is a separate response-serialization concern (design.md
+ *   D4), not a permission.
+ * - vendedor: product:read/resource:read/venue:read (to pick what to
+ *   sell) plus counter-sale:create - deliberately no order:read/manage,
+ *   since the proposal restricts this role to the counter-sale screen
+ *   only, not order history.
+ * - validador: venue:read (the scan screen needs to offer the
+ *   Validador's assigned Venue(s) to pick from - spec: access/scan -
+ *   "Every scan request SHALL carry the Venue... SHALL NOT infer... from
+ *   identity or role", so it can't be inferred, it has to be listed) plus
+ *   entitlement:consume, mirroring the old access_operator's permission
+ *   pair. Found missing during manual testing: without venue:read, the
+ *   Scanner screen's Venue selector came back empty for this role.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  owner: [
+  admin: [
     "organization:manage",
     "organization:read",
     "venue:manage",
@@ -78,43 +64,15 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "resource:read",
     "reservation:manage",
     "order:manage",
+    "order:read",
     "payment:manage",
     "entitlement:consume",
+    "counter-sale:create",
+    "user:manage",
   ],
-  admin: [
-    "organization:read",
-    "venue:manage",
-    "venue:read",
-    "configuration:manage",
-    "configuration:read",
-    "audit:read",
-    "product:manage",
-    "product:read",
-    "resource:manage",
-    "resource:read",
-    "reservation:manage",
-    "order:manage",
-    "payment:manage",
-    "entitlement:consume",
-  ],
-  finance: [
-    "organization:read",
-    "venue:read",
-    "configuration:read",
-    "audit:read",
-    "product:read",
-    "resource:read",
-  ],
-  sales: ["organization:read", "venue:read", "product:read", "resource:read"],
-  operator: ["organization:read", "venue:read", "product:read", "resource:read"],
-  access_operator: ["venue:read", "entitlement:consume"],
-  read_only: [
-    "organization:read",
-    "venue:read",
-    "configuration:read",
-    "product:read",
-    "resource:read",
-  ],
+  gerente: ["venue:read", "venue:manage", "resource:read", "order:read"],
+  vendedor: ["venue:read", "product:read", "resource:read", "counter-sale:create"],
+  validador: ["venue:read", "entitlement:consume"],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {

@@ -53,7 +53,7 @@ async function seedIssuedEntitlement(name: string) {
     .execute();
   await db
     .insertInto("product_variants")
-    .values({ id: variantId, tenant_id: tenantId, product_id: productId, name: "Único", price_cents: 2000 })
+    .values({ id: variantId, tenant_id: tenantId, product_id: productId, venue_id: venueId, name: "Único", price_cents: 2000 })
     .execute();
   await db
     .insertInto("orders")
@@ -65,6 +65,7 @@ async function seedIssuedEntitlement(name: string) {
       id: orderLineId,
       tenant_id: tenantId,
       order_id: orderId,
+      venue_id: venueId,
       variant_id: variantId,
       name: "Ingresso",
       unit_price_cents: 2000,
@@ -79,6 +80,7 @@ async function seedIssuedEntitlement(name: string) {
       order_id: orderId,
       order_line_id: orderLineId,
       customer_id: customerId,
+      venue_id: venueId,
       status: "issued",
     })
     .execute();

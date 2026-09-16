@@ -8,7 +8,8 @@ export interface OrderSummary {
   venueId: string;
   status: string;
   channel: string;
-  totalCents: number;
+  /** Absent for a Gerente session (spec: commerce/order - "Gerente order retrieval omits monetary fields"). */
+  totalCents?: number;
 }
 
 export default async function OrdersPage({

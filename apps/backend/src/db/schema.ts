@@ -43,7 +43,19 @@ export interface RoleAssignmentsTable {
   tenant_id: string;
   user_id: string;
   role: string;
+  /** Null for an org-wide (Admin) assignment; set for Gerente/Vendedor/Validador. */
+  venue_id: string | null;
   created_at: Generated<Timestamp>;
+}
+
+/** Legacy (pre-add-venue-scoped-user-roles) role_assignments rows archived instead of dropped. */
+export interface LegacyRoleAssignmentsArchiveTable {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  role: string;
+  created_at: Timestamp;
+  archived_at: Generated<Timestamp>;
 }
 
 export interface SessionsTable {
@@ -118,6 +130,7 @@ export interface ProductVariantsTable {
   id: Generated<string>;
   tenant_id: string;
   product_id: string;
+  venue_id: string;
   name: string;
   price_cents: number;
   resource_id: string | null;
@@ -140,6 +153,7 @@ export interface ResourceCapacityPeriodsTable {
   id: Generated<string>;
   tenant_id: string;
   resource_id: string;
+  venue_id: string;
   period: ColumnType<string, string, string>;
   capacity: number;
   created_at: Generated<Timestamp>;
@@ -152,6 +166,7 @@ export interface ResourceCapacityCommitmentsTable {
   id: Generated<string>;
   tenant_id: string;
   resource_id: string;
+  venue_id: string;
   period: ColumnType<string, string, string>;
   amount: number;
   status: ResourceCapacityCommitmentStatus;
@@ -172,6 +187,7 @@ export interface ReservationsTable {
   id: Generated<string>;
   tenant_id: string;
   resource_id: string;
+  venue_id: string;
   period: ColumnType<string, string, string>;
   amount: number;
   status: ReservationStatus;
@@ -218,6 +234,7 @@ export interface OrderLinesTable {
   id: Generated<string>;
   tenant_id: string;
   order_id: string;
+  venue_id: string;
   variant_id: string;
   name: string;
   unit_price_cents: number;
@@ -230,6 +247,7 @@ export interface OrderStatusHistoryTable {
   id: Generated<string>;
   tenant_id: string;
   order_id: string;
+  venue_id: string;
   from_status: OrderStatus | null;
   to_status: OrderStatus;
   actor_user_id: string | null;
@@ -282,6 +300,7 @@ export interface EntitlementsTable {
   order_id: string;
   order_line_id: string;
   customer_id: string;
+  venue_id: string;
   status: Generated<EntitlementStatus>;
   created_at: Generated<Timestamp>;
 }
@@ -290,6 +309,7 @@ export interface TicketsTable {
   id: Generated<string>;
   tenant_id: string;
   entitlement_id: string;
+  venue_id: string;
   code: string;
   issued_at: Generated<Timestamp>;
 }
@@ -328,6 +348,7 @@ export interface Database {
   venues: VenuesTable;
   users: UsersTable;
   role_assignments: RoleAssignmentsTable;
+  legacy_role_assignments_archive: LegacyRoleAssignmentsArchiveTable;
   sessions: SessionsTable;
   platform_admins: PlatformAdminsTable;
   platform_sessions: PlatformSessionsTable;

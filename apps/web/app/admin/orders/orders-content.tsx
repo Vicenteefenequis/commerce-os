@@ -22,6 +22,10 @@ const CHANNEL_OPTIONS = Object.entries(CHANNEL_LABELS);
 /** spec: commerce/order - "Orders can be listed by tenant". No create action: Orders are only created via checkout. */
 export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; filters: OrderFilters }) {
   const hasFilters = Boolean(filters.id || filters.customer || filters.status || filters.channel);
+  // openspec change add-venue-scoped-user-roles: a Gerente session's
+  // orders never carry totalCents (backend redaction) - hide the column
+  // entirely rather than show a placeholder per row.
+  const showTotal = orders.some((order) => order.totalCents !== undefined);
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,7 +120,7 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
               <TableHeaderCell>Unidade</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell>Canal</TableHeaderCell>
-              <TableHeaderCell>Total</TableHeaderCell>
+              {showTotal && <TableHeaderCell>Total</TableHeaderCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -140,7 +144,11 @@ export function OrdersContent({ orders, filters }: { orders: OrderSummary[]; fil
                     {CHANNEL_LABELS[order.channel] ?? order.channel}
                   </Badge>
                 </TableCell>
-                <TableCell label="Total">R$ {(order.totalCents / 100).toFixed(2)}</TableCell>
+                {showTotal && (
+                  <TableCell label="Total">
+                    {order.totalCents !== undefined ? `R$ ${(order.totalCents / 100).toFixed(2)}` : "—"}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

@@ -12,7 +12,7 @@ Today every authenticated admin session can reach every admin screen and see eve
   - Gerente: Venues (view/edit config of their assigned Venue), Pedidos (view, status only — no monetary amounts), Recursos. No Dashboard access (GMV and other aggregate financial figures never load for this role).
   - Vendedor: Balcão (counter sale) only, restricted to their assigned Venue. No other nav entry is rendered.
   - Validador: Scanner (ticket validation, manual and platform-issued tickets alike — both already funnel through the same scan flow) only, restricted to their assigned Venue. No other nav entry is rendered.
-- Add a new "Usuários" admin screen, visible only to Admin, to list an Organization's users and assign/revoke a role (optionally bound to a Venue) per user.
+- Add a new "Usuários" admin screen, visible only to Admin, to list an Organization's users and assign/revoke a role (optionally bound to a Venue) per user. Includes creating a brand-new user (email + an Admin-set initial password) together with their first role assignment in a single action - added after initial local testing surfaced that, without it, no one could actually be onboarded onto a new role (revises design.md's original Non-Goal, see design.md D7).
 - Redact monetary fields (order/line amounts) from order data returned to a Gerente; status and non-monetary fields remain visible.
 
 ## Capabilities
@@ -26,6 +26,7 @@ Today every authenticated admin session can reach every admin screen and see eve
 - `admin/counter-sale`: restricts counter sale creation to Admin or Vendedor, and (for Vendedor) only for the Venue(s) they're assigned to, replacing the current "any authenticated admin session" rule.
 - `access/scan`: restricts scan requests to Admin or Validador, and (for Validador) only for the Venue(s) they're assigned to.
 - `commerce/order`: retrieving Orders as a Gerente SHALL omit monetary fields (order/line amounts); Gerente order retrieval is additionally restricted to their assigned Venue(s).
+- `foundation/venue`: listing an Organization's Venues is restricted to the caller's assigned Venue(s) for Gerente/Vendedor/Validador (Admin continues to see every Venue).
 
 ## Impact
 

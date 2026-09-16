@@ -28,8 +28,8 @@ export interface CreateTenantWithOwnerResult {
 
 /**
  * spec: foundation/platform-admin - "Register a tenant as platform admin".
- * Creates the Organization, its first User, and that user's `owner`
- * role_assignment together. Relies entirely on the caller running this
+ * Creates the Organization, its first User, and that user's org-wide
+ * `admin` role_assignment together. Relies entirely on the caller running this
  * inside a single database transaction (see platform.controller.ts) for
  * atomicity - a thrown error here leaves nothing committed.
  */
@@ -77,7 +77,8 @@ export class CreateTenantWithOwnerUseCase {
     await this.roleAssignments.create({
       tenantId: organization.id,
       userId: owner.id,
-      role: "owner",
+      role: "admin",
+      venueId: null,
     });
 
     return { organization, owner };

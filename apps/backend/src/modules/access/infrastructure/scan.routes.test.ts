@@ -68,7 +68,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
     .execute();
   await db
     .insertInto("product_variants")
-    .values({ id: variantId, tenant_id: tenantId, product_id: productId, name: "Único", price_cents: 2000 })
+    .values({ id: variantId, tenant_id: tenantId, product_id: productId, venue_id: venueId, name: "Único", price_cents: 2000 })
     .execute();
 
   let reservationId: string | null = null;
@@ -92,6 +92,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
         id: commitmentId,
         tenant_id: tenantId,
         resource_id: resourceId,
+        venue_id: venueId,
         period: options.reservationPeriod,
         amount: 1,
         status: "held",
@@ -103,6 +104,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
         id: reservationId,
         tenant_id: tenantId,
         resource_id: resourceId,
+        venue_id: venueId,
         period: options.reservationPeriod,
         amount: 1,
         status: "confirmed",
@@ -122,6 +124,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
       id: orderLineId,
       tenant_id: tenantId,
       order_id: orderId,
+      venue_id: venueId,
       variant_id: variantId,
       name: "Ingresso",
       unit_price_cents: 2000,
@@ -137,27 +140,34 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
       order_id: orderId,
       order_line_id: orderLineId,
       customer_id: customerId,
+      venue_id: venueId,
       status: options.entitlementStatus ?? "issued",
     })
     .execute();
   await db
     .insertInto("tickets")
-    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, code })
+    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, venue_id: venueId, code })
     .execute();
 
   return { tenantId, venueId, otherVenueId, entitlementId, code };
 }
 
-async function seedOperator(tenantId: string, role: Role = "access_operator") {
+async function seedOperator(
+  tenantId: string,
+  role: Role = "validador",
+  venueIds: Array<string | null> = [null],
+) {
   const userId = randomUUID();
   await db
     .insertInto("users")
     .values({ id: userId, tenant_id: tenantId, email: `op-${userId}@example.com`, password_hash: "x" })
     .execute();
-  await db
-    .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role })
-    .execute();
+  for (const venueId of venueIds) {
+    await db
+      .insertInto("role_assignments")
+      .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
+      .execute();
+  }
   const session = await db
     .insertInto("sessions")
     .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, expires_at: new Date(Date.now() + 900_000) })
@@ -191,7 +201,7 @@ function todayPeriod(offsetDays = 0): string {
 describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
   it("authorizes and consumes an issued Entitlement scanned at its own Venue", async () => {
     const seed = await seedScannableTicket("Zoo Scan Autorizado");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -206,7 +216,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("reports a rescan of the same Ticket as already used (spec: Entitlement already consumed)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Repetido");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
     const app = createApp();
 
     const first = await request(app)
@@ -228,7 +238,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("reports an unknown code as invalid (spec: Unknown or malformed code)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Invalido");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -243,7 +253,11 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("reports a scan at another Venue of the same Organization as wrong venue", async () => {
     const seed = await seedScannableTicket("Zoo Scan Local");
-    const cookie = await seedOperator(seed.tenantId);
+    // Scoped to otherVenueId (not venueId) - a Validador legitimately
+    // permitted to scan there, distinct from the Venue the Ticket's
+    // Order was actually sold for (spec: "Wrong venue is detected
+    // against the Order's Venue", not the permission check).
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.otherVenueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -257,7 +271,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("reports a scan before a Reservation-backed Entitlement's period as wrong time", async () => {
     const seed = await seedScannableTicket("Zoo Scan Cedo", { reservationPeriod: todayPeriod(1) });
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -271,7 +285,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("reports a scan after a Reservation-backed Entitlement's period as expired", async () => {
     const seed = await seedScannableTicket("Zoo Scan Tarde", { reservationPeriod: todayPeriod(-1) });
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -285,7 +299,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("authorizes a Reservation-backed Entitlement scanned within its period", async () => {
     const seed = await seedScannableTicket("Zoo Scan No Horario", { reservationPeriod: todayPeriod(0) });
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -299,7 +313,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("records every attempt, authorized or denied (spec: Every scan attempt is recorded)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Registro");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId, seed.otherVenueId]);
     const app = createApp();
 
     await request(app)
@@ -319,7 +333,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("denies an identity without entitlement:consume (spec: Scanning requires the entitlement:consume permission)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Sem Permissao");
-    const cookie = await seedOperator(seed.tenantId, "sales");
+    const cookie = await seedOperator(seed.tenantId, "gerente", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -343,7 +357,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
   it("treats a Ticket from another Organization exactly like an unknown code (spec: Access Control is isolated by tenant)", async () => {
     const owner = await seedScannableTicket("Zoo Scan Tenant A");
     const other = await seedScannableTicket("Zoo Scan Tenant B");
-    const cookie = await seedOperator(other.tenantId);
+    const cookie = await seedOperator(other.tenantId, "validador", [other.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
@@ -358,7 +372,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("rejects a request with no venueId before looking the Ticket up (spec: Scan without a selected Venue is rejected)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Sem Venue");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp()).post("/access/scan").set("Cookie", cookie).send({ code: seed.code });
 
@@ -371,26 +385,57 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
   it("rejects a venueId from another Organization (design.md D1)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Venue Alheio");
     const other = await seedScannableTicket("Zoo Scan Venue Alheio Dono");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp())
       .post("/access/scan")
       .set("Cookie", cookie)
       .send({ code: seed.code, venueId: other.venueId });
 
-    expect(res.status).toBe(400);
+    // openspec change add-venue-scoped-user-roles: a Venue outside the
+    // caller's assigned Venue(s) - which a Venue from another
+    // Organization always is - is now denied by the Venue-scoped
+    // permission check itself (403), earlier than the use case's own
+    // tenant validation (previously 400).
+    expect(res.status).toBe(403);
     expect(await entitlementStatus(seed.tenantId, seed.entitlementId)).toBe("issued");
     expect(await scanAttempts(seed.tenantId)).toHaveLength(0);
   });
 
   it("rejects a request with no code", async () => {
     const seed = await seedScannableTicket("Zoo Scan Sem Codigo");
-    const cookie = await seedOperator(seed.tenantId);
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.venueId]);
 
     const res = await request(createApp()).post("/access/scan").set("Cookie", cookie).send({ venueId: seed.venueId });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/code/);
     expect(await scanAttempts(seed.tenantId)).toHaveLength(0);
+  });
+
+  it("allows an Admin to scan for any Venue in their Organization (spec: Admin scans for any Venue)", async () => {
+    const seed = await seedScannableTicket("Zoo Scan Admin");
+    const cookie = await seedOperator(seed.tenantId, "admin");
+
+    const res = await request(createApp())
+      .post("/access/scan")
+      .set("Cookie", cookie)
+      .send({ code: seed.code, venueId: seed.venueId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.outcome).toBe("authorized");
+  });
+
+  it("denies a Validador scoped to a different Venue in the same Organization (spec: Validador is denied for a Venue they are not assigned to)", async () => {
+    const seed = await seedScannableTicket("Zoo Scan Validador Venue Errado");
+    const cookie = await seedOperator(seed.tenantId, "validador", [seed.otherVenueId]);
+
+    const res = await request(createApp())
+      .post("/access/scan")
+      .set("Cookie", cookie)
+      .send({ code: seed.code, venueId: seed.venueId });
+
+    expect(res.status).toBe(403);
+    expect(await entitlementStatus(seed.tenantId, seed.entitlementId)).toBe("issued");
   });
 });

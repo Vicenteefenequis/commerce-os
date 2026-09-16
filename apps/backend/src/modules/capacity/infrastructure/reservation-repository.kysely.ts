@@ -7,12 +7,20 @@ export class KyselyReservationRepository implements ReservationRepositoryPort {
   constructor(private readonly trx: Trx) {}
 
   async create(input: CreateReservationInput): Promise<Reservation> {
+    const resource = await this.trx
+      .selectFrom("resources")
+      .select("venue_id")
+      .where("tenant_id", "=", input.tenantId)
+      .where("id", "=", input.resourceId)
+      .executeTakeFirstOrThrow();
+
     const row = await this.trx
       .insertInto("reservations")
       .values({
         id: input.id,
         tenant_id: input.tenantId,
         resource_id: input.resourceId,
+        venue_id: resource.venue_id,
         period: input.period,
         amount: input.amount,
         status: "pending",
