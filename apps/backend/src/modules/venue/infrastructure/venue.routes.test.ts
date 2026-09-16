@@ -66,6 +66,24 @@ async function seedTenantWithVenue(name: string) {
   return { tenantId, venueId };
 }
 
+async function seedGerente(tenantId: string, venueId: string) {
+  const userId = randomUUID();
+  await db
+    .insertInto("users")
+    .values({ id: userId, tenant_id: tenantId, email: `gerente-${userId}@example.com`, password_hash: "x" })
+    .execute();
+  await db
+    .insertInto("role_assignments")
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "gerente", venue_id: venueId })
+    .execute();
+  const session = await db
+    .insertInto("sessions")
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, expires_at: new Date(Date.now() + 900_000) })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return sessionCookieHeader(session.id);
+}
+
 describe.skipIf(!dbReachable)("PATCH /venues/:id (live Postgres)", () => {
   it("updates profile fields and the publish toggle for the owning tenant", async () => {
     const { tenantId, venueId } = await seedTenantWithVenue("Bar do Zé");
@@ -138,5 +156,41 @@ describe.skipIf(!dbReachable)("PATCH /venues/:id (live Postgres)", () => {
       .send({ published: true });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe.skipIf(!dbReachable)("GET /venues (live Postgres) - Venue scope (openspec change add-venue-scoped-user-roles)", () => {
+  it("scopes a Gerente's list to their assigned Venue (spec: foundation/venue - Gerente lists only their assigned Venue)", async () => {
+    const { tenantId, venueId: venueAId } = await seedTenantWithVenue("Multi Venue Org");
+    const venueBId = randomUUID();
+    await db
+      .insertInto("venues")
+      .values({ id: venueBId, tenant_id: tenantId, name: "Multi Venue Org Venue B", slug: `venue-${venueBId.slice(0, 8)}` })
+      .execute();
+
+    const cookie = await seedGerente(tenantId, venueAId);
+
+    const res = await request(createApp()).get("/venues").set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    const ids = (res.body.venues as Array<{ id: string }>).map((v) => v.id);
+    expect(ids).toEqual([venueAId]);
+  });
+
+  it("lets an Admin list every Venue (spec: foundation/venue - Admin lists every Venue)", async () => {
+    const { tenantId, venueId: venueAId } = await seedTenantWithVenue("Multi Venue Org Admin");
+    const venueBId = randomUUID();
+    await db
+      .insertInto("venues")
+      .values({ id: venueBId, tenant_id: tenantId, name: "Multi Venue Org Admin Venue B", slug: `venue-${venueBId.slice(0, 8)}` })
+      .execute();
+
+    const cookie = await seedOwner(tenantId);
+
+    const res = await request(createApp()).get("/venues").set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    const ids = (res.body.venues as Array<{ id: string }>).map((v) => v.id).sort();
+    expect(ids).toEqual([venueAId, venueBId].sort());
   });
 });

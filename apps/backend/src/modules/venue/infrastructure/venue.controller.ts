@@ -48,6 +48,7 @@ export async function listVenuesController(req: Request, trx: Trx): Promise<TxRe
 
   const venues = await new ListVenuesUseCase(new KyselyVenueRepository(trx)).execute(
     identity.tenantId,
+    identity.venueIds === "all" ? undefined : identity.venueIds,
   );
 
   return {

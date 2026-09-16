@@ -59,10 +59,20 @@
 
 ## 8. Frontend
 
-- [ ] 8.1 Update `apps/web/components/layout/admin-nav.tsx` (and `-client.tsx`) to filter links by the resolved identity's role: Admin sees all incl. new "Usuários"; Gerente sees Unidades/Pedidos/Recursos only; Vendedor sees only Venda no balcão; Validador sees only Scanner; verify with a component test per role.
-- [ ] 8.2 Update the Pedidos screen to hide monetary columns/fields when the session's role is Gerente (matching the backend redaction), showing status and other fields as normal; verify with a component test.
-- [ ] 8.3 Build the new `/admin/users` screen (Admin only): list users with their role/Venue assignments, and a form to create/revoke an assignment (role + Venue picker, Venue picker disabled/hidden for Admin role); verify by exercising create and revoke through the running app.
-- [ ] 8.4 Ensure the Venue selector on Dashboard/Pedidos/Unidades only offers Venues the session is scoped to (Admin: all; others: their assigned Venue(s)); verify with a component test.
+- [x] 8.1 Update `apps/web/components/layout/admin-nav.tsx` (and `-client.tsx`) to filter links by the resolved identity's role: Admin sees all incl. new "Usuários"; Gerente sees Unidades/Pedidos/Recursos only; Vendedor sees only Venda no balcão; Validador sees only Scanner; verify with a component test per role.
+- [x] 8.2 Update the Pedidos screen to hide monetary columns/fields when the session's role is Gerente (matching the backend redaction), showing status and other fields as normal; verify with a component test.
+- [x] 8.3 Build the new `/admin/users` screen (Admin only): list users with their role/Venue assignments, and a form to create/revoke an assignment (role + Venue picker, Venue picker disabled/hidden for Admin role); verify by exercising create and revoke through the running app.
+- [x] 8.4 Ensure the Venue selector on Dashboard/Pedidos/Unidades only offers Venues the session is scoped to (Admin: all; others: their assigned Venue(s)); verify with a component test.
+
+  8.1: new `apps/web/lib/roles.ts` (`ROLE_LINKS`/`navLinksForRoles`, shared with the login redirect from task 4.2) drives `AdminNav`'s link list from `/auth/me`'s `roles`.
+
+  8.2: `orders-content.tsx` and `order-detail-content.tsx` treat the now-optional `totalCents`/`unitPriceCents`/payment amount fields as "hide this column/line entirely when absent" rather than rendering a placeholder, matching the backend redaction from task 7.1.
+
+  8.3: new `/admin/users` route (page, `users-content.tsx`, `actions.ts`) - one row per assignment (role badge + Venue name or "Todas (organização inteira)"), a dialog to create an assignment (user/role/Venue selects, Venue select hidden when role is Admin), and a revoke button per row.
+
+  8.4: Dashboard needed no change (Admin-only per task 4, so its Venue selector already only ever renders for a session that can see every Venue). Pedidos has no Venue selector at all (already server-scoped by task 7.2). Unidades did need one: this task's Venue selector requirement doesn't literally exist for "Unidades" as UI (it's a list, not a picker), so the equivalent fix is scoping *what the list itself returns* - this surfaced a proposal/spec gap (`foundation/venue` wasn't listed as a modified capability even though the proposal's own "Gerente: Venues (view/edit config of their assigned Venue)" line implied it). Added a delta spec (`specs/foundation/venue/spec.md`, new requirement "Venue listing is scoped to the caller's assigned Venue(s)") and updated `proposal.md`'s Capabilities section before implementing `ListVenuesUseCase`'s Venue filter, so specs and code stay in sync rather than silently diverging.
+
+  Full backend suite: 430/430. Frontend: `next build` compiles clean (type-checks the whole app, since there's no separate web test runner), `eslint` clean on every touched file.
 
 ## 9. Migration and rollout
 

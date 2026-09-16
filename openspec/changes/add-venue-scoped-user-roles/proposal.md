@@ -26,6 +26,7 @@ Today every authenticated admin session can reach every admin screen and see eve
 - `admin/counter-sale`: restricts counter sale creation to Admin or Vendedor, and (for Vendedor) only for the Venue(s) they're assigned to, replacing the current "any authenticated admin session" rule.
 - `access/scan`: restricts scan requests to Admin or Validador, and (for Validador) only for the Venue(s) they're assigned to.
 - `commerce/order`: retrieving Orders as a Gerente SHALL omit monetary fields (order/line amounts); Gerente order retrieval is additionally restricted to their assigned Venue(s).
+- `foundation/venue`: listing an Organization's Venues is restricted to the caller's assigned Venue(s) for Gerente/Vendedor/Validador (Admin continues to see every Venue).
 
 ## Impact
 

@@ -8,7 +8,8 @@ export interface OrderLine {
   id: string;
   variantId: string;
   name: string;
-  unitPriceCents: number;
+  /** Absent for a Gerente session (spec: commerce/order - "Gerente order retrieval omits monetary fields"). */
+  unitPriceCents?: number;
   quantity: number;
   reservationId: string | null;
 }
@@ -17,15 +18,17 @@ export interface OrderPayment {
   id: string;
   status: string;
   method: string;
-  amountCents: number;
-  refundedAmountCents: number;
+  /** Absent for a Gerente session, same as OrderLine.unitPriceCents. */
+  amountCents?: number;
+  refundedAmountCents?: number;
 }
 
 export interface OrderDetail {
   id: string;
   venueId: string;
   status: string;
-  totalCents: number;
+  /** Absent for a Gerente session, same as OrderLine.unitPriceCents. */
+  totalCents?: number;
   lines: OrderLine[];
   payment: OrderPayment | null;
 }
