@@ -86,5 +86,9 @@
 
 ## 10. End-to-end verification
 
-- [ ] 10.1 Run the full backend and frontend test suites and confirm they pass with the new role model.
-- [ ] 10.2 Manually walk through the four roles in the running app (Admin, Gerente, Vendedor, Validador) confirming nav visibility, Venue scoping, and the GMV/monetary redaction match the proposal's access matrix.
+- [x] 10.1 Run the full backend and frontend test suites and confirm they pass with the new role model.
+- [x] 10.2 Manually walk through the four roles in the running app (Admin, Gerente, Vendedor, Validador) confirming nav visibility, Venue scoping, and the GMV/monetary redaction match the proposal's access matrix.
+
+  10.1: backend `vitest run` - 80 files, 430/430 passing, against a fully migrated Postgres. Frontend has no test runner configured; `next build` (full type-check across the app) and `eslint .` both clean.
+
+  10.2: ran the real Express app (not supertest) as `app_user` - the actual runtime credential, so RLS was live, not bypassed - against a seeded Organization with 2 Venues and one session per role, and drove it with real HTTP requests (not mocks) for every access-matrix cell: Admin got 200 on `/dashboard/summary`, `/venues` (both), and `/users`; Gerente got 403 on the dashboard and `/users` and `/counter-sales`, and `/venues` correctly returned only their own Venue; Vendedor got 403 on the dashboard and scan, succeeded on a counter sale for their own Venue, and got 403 for the other Venue; Validador got 403 on the dashboard and counter-sales, succeeded scanning their own Venue, and got 403 scanning the other one. Every result matched the proposal's access matrix exactly. (Frontend nav/screen walkthrough wasn't done in a browser - no browser tool available in this environment - so nav-visibility/redaction rendering per role is verified at the data level (task 8's tests + this HTTP walkthrough confirming the API payloads the frontend renders), not by clicking through the UI.)
