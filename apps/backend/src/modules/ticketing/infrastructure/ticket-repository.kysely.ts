@@ -6,12 +6,20 @@ export class KyselyTicketRepository implements TicketRepositoryPort {
   constructor(private readonly trx: Trx) {}
 
   async create(input: CreateTicketInput): Promise<Ticket> {
+    const entitlement = await this.trx
+      .selectFrom("entitlements")
+      .select("venue_id")
+      .where("tenant_id", "=", input.tenantId)
+      .where("id", "=", input.entitlementId)
+      .executeTakeFirstOrThrow();
+
     const row = await this.trx
       .insertInto("tickets")
       .values({
         id: input.id,
         tenant_id: input.tenantId,
         entitlement_id: input.entitlementId,
+        venue_id: entitlement.venue_id,
         code: input.code,
       })
       .returningAll()

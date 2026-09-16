@@ -4,6 +4,7 @@ import { db } from "../../db/kysely.js";
 import { readSessionCookie } from "../../modules/identity/infrastructure/cookie.js";
 import { findSessionByIdUnscoped } from "../../modules/identity/infrastructure/session-repository.kysely.js";
 import { KyselyRoleAssignmentRepository } from "../../modules/authorization/infrastructure/role-assignment-repository.kysely.js";
+import { resolveVenueScope } from "../../modules/authorization/domain/venue-scope.js";
 import type { Identity } from "../identity.js";
 
 /**
@@ -28,15 +29,16 @@ export async function resolveIdentity(req: Request, _res: Response, next: NextFu
       return next();
     }
 
-    const roles = await db.transaction().execute(async (trx) => {
+    const { roles, venueIds } = await db.transaction().execute(async (trx) => {
       await sql`select set_config('app.tenant_id', ${session.tenantId}, true)`.execute(trx);
-      return new KyselyRoleAssignmentRepository(trx).findRolesForUser(
+      const assignments = await new KyselyRoleAssignmentRepository(trx).findAssignmentsForUser(
         session.tenantId,
         session.userId,
       );
+      return { roles: assignments.map((a) => a.role), venueIds: resolveVenueScope(assignments) };
     });
 
-    const identity: Identity = { userId: session.userId, tenantId: session.tenantId, roles };
+    const identity: Identity = { userId: session.userId, tenantId: session.tenantId, roles, venueIds };
     req.identity = identity;
     next();
   } catch (err) {

@@ -28,6 +28,13 @@ export class KyselyCapacityCommitmentRepository implements CapacityCommitmentRep
     const lockKey = `${input.tenantId}:${input.resourceId}:${input.period}`;
     await sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`.execute(this.trx);
 
+    const resource = await this.trx
+      .selectFrom("resources")
+      .select("venue_id")
+      .where("tenant_id", "=", input.tenantId)
+      .where("id", "=", input.resourceId)
+      .executeTakeFirstOrThrow();
+
     if (input.hardCapacity) {
       const periods = new KyselyCapacityPeriodRepository(this.trx);
       const [configured, committed] = await Promise.all([
@@ -47,6 +54,7 @@ export class KyselyCapacityCommitmentRepository implements CapacityCommitmentRep
         id,
         tenant_id: input.tenantId,
         resource_id: input.resourceId,
+        venue_id: resource.venue_id,
         period: input.period,
         amount: input.amount,
         status: "held",

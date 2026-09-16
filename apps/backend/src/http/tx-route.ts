@@ -32,11 +32,27 @@ function sendTxResult(res: Response, result: TxResult): void {
 }
 
 /**
+ * openspec change add-venue-scoped-user-roles, design.md D3: encodes a
+ * caller's Venue scope into the `app.venue_ids` transaction-local
+ * setting the RLS policies read. `"all"` (Admin, or no identity at all -
+ * public/storefront routes never carry a Venue scope) and `undefined`
+ * both encode to the empty-string sentinel, since "never set" and
+ * "explicitly empty" are deliberately equivalent (see the RLS migration
+ * comment): Venue scope only narrows access for identities that actually
+ * carry one, it is never the sole isolation mechanism.
+ */
+function encodeVenueIds(venueIds: string[] | "all" | undefined): string {
+  if (venueIds === undefined || venueIds === "all") return "";
+  return venueIds.join(",");
+}
+
+/**
  * Wraps a route handler in a single database transaction scoped to the
- * caller's tenant. `app.tenant_id` is set via `set_config(..., true)`
- * (transaction-local) before the handler runs, so Row Level Security
- * policies enforce isolation even if a repository forgets its own filter.
- * The HTTP response is only sent after the transaction commits.
+ * caller's tenant and Venue scope. `app.tenant_id`/`app.venue_ids` are set
+ * via `set_config(..., true)` (transaction-local) before the handler
+ * runs, so Row Level Security policies enforce isolation even if a
+ * repository forgets its own filter. The HTTP response is only sent
+ * after the transaction commits.
  */
 export function txRoute(handler: TxHandler) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -46,6 +62,7 @@ export function txRoute(handler: TxHandler) {
         if (tenantId) {
           await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
         }
+        await sql`select set_config('app.venue_ids', ${encodeVenueIds(req.identity?.venueIds)}, true)`.execute(trx);
         return handler(req, trx);
       });
       sendTxResult(res, result);
@@ -82,6 +99,7 @@ export function txRouteWithTenant(resolveTenantId: (req: Request) => string, han
       const result = await db.transaction().execute(async (trx) => {
         const tenantId = resolveTenantId(req);
         await sql`select set_config('app.tenant_id', ${tenantId}, true)`.execute(trx);
+        await sql`select set_config('app.venue_ids', ${encodeVenueIds(req.identity?.venueIds)}, true)`.execute(trx);
         return handler(req, trx);
       });
       sendTxResult(res, result);

@@ -44,7 +44,7 @@ async function seedVariant(tenantId: string, venueId: string) {
     .execute();
   await db
     .insertInto("product_variants")
-    .values({ id: variantId, tenant_id: tenantId, product_id: productId, name: "Único", price_cents: 1 })
+    .values({ id: variantId, tenant_id: tenantId, product_id: productId, venue_id: venueId, name: "Único", price_cents: 1 })
     .execute();
   return variantId;
 }
@@ -81,6 +81,7 @@ async function seedOrder(
       id: lineId,
       tenant_id: tenantId,
       order_id: orderId,
+      venue_id: venueId,
       variant_id: variantId,
       name: "Ingresso",
       unit_price_cents: unitPriceCents,
@@ -92,15 +93,15 @@ async function seedOrder(
 }
 
 /** Issues one Entitlement and one Ticket for an order line, as the ticketing outbox consumer would on payment. */
-async function seedTicket(tenantId: string, orderId: string, lineId: string, customerId: string) {
+async function seedTicket(tenantId: string, venueId: string, orderId: string, lineId: string, customerId: string) {
   const entitlementId = randomUUID();
   await db
     .insertInto("entitlements")
-    .values({ id: entitlementId, tenant_id: tenantId, order_id: orderId, order_line_id: lineId, customer_id: customerId })
+    .values({ id: entitlementId, tenant_id: tenantId, order_id: orderId, order_line_id: lineId, customer_id: customerId, venue_id: venueId })
     .execute();
   await db
     .insertInto("tickets")
-    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, code: `TCK-${randomUUID()}` })
+    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, venue_id: venueId, code: `TCK-${randomUUID()}` })
     .execute();
 }
 
@@ -132,7 +133,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "owner" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "admin" })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -244,12 +245,12 @@ describe.skipIf(!dbReachable)("GET /dashboard/summary (live Postgres)", () => {
     const inRange = new Date("2026-06-15T00:00:00Z");
 
     const platformOrder = await seedOrder(tenantId, venueId, "paid", 5000, inRange, "storefront");
-    await seedTicket(tenantId, platformOrder.orderId, platformOrder.lineId, platformOrder.customerId);
+    await seedTicket(tenantId, venueId, platformOrder.orderId, platformOrder.lineId, platformOrder.customerId);
 
     const manualOrder1 = await seedOrder(tenantId, venueId, "paid", 2000, inRange, "counter");
-    await seedTicket(tenantId, manualOrder1.orderId, manualOrder1.lineId, manualOrder1.customerId);
+    await seedTicket(tenantId, venueId, manualOrder1.orderId, manualOrder1.lineId, manualOrder1.customerId);
     const manualOrder2 = await seedOrder(tenantId, venueId, "fulfilled", 3000, inRange, "counter");
-    await seedTicket(tenantId, manualOrder2.orderId, manualOrder2.lineId, manualOrder2.customerId);
+    await seedTicket(tenantId, venueId, manualOrder2.orderId, manualOrder2.lineId, manualOrder2.customerId);
 
     const cookie = await seedAuthenticatedStaff(tenantId);
     const app = createApp();

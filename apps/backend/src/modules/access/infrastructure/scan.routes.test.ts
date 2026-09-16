@@ -68,7 +68,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
     .execute();
   await db
     .insertInto("product_variants")
-    .values({ id: variantId, tenant_id: tenantId, product_id: productId, name: "Único", price_cents: 2000 })
+    .values({ id: variantId, tenant_id: tenantId, product_id: productId, venue_id: venueId, name: "Único", price_cents: 2000 })
     .execute();
 
   let reservationId: string | null = null;
@@ -92,6 +92,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
         id: commitmentId,
         tenant_id: tenantId,
         resource_id: resourceId,
+        venue_id: venueId,
         period: options.reservationPeriod,
         amount: 1,
         status: "held",
@@ -103,6 +104,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
         id: reservationId,
         tenant_id: tenantId,
         resource_id: resourceId,
+        venue_id: venueId,
         period: options.reservationPeriod,
         amount: 1,
         status: "confirmed",
@@ -122,6 +124,7 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
       id: orderLineId,
       tenant_id: tenantId,
       order_id: orderId,
+      venue_id: venueId,
       variant_id: variantId,
       name: "Ingresso",
       unit_price_cents: 2000,
@@ -137,18 +140,19 @@ async function seedScannableTicket(name: string, options: SeedOptions = {}) {
       order_id: orderId,
       order_line_id: orderLineId,
       customer_id: customerId,
+      venue_id: venueId,
       status: options.entitlementStatus ?? "issued",
     })
     .execute();
   await db
     .insertInto("tickets")
-    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, code })
+    .values({ id: randomUUID(), tenant_id: tenantId, entitlement_id: entitlementId, venue_id: venueId, code })
     .execute();
 
   return { tenantId, venueId, otherVenueId, entitlementId, code };
 }
 
-async function seedOperator(tenantId: string, role: Role = "access_operator") {
+async function seedOperator(tenantId: string, role: Role = "validador") {
   const userId = randomUUID();
   await db
     .insertInto("users")
@@ -319,7 +323,7 @@ describe.skipIf(!dbReachable)("POST /access/scan (live Postgres)", () => {
 
   it("denies an identity without entitlement:consume (spec: Scanning requires the entitlement:consume permission)", async () => {
     const seed = await seedScannableTicket("Zoo Scan Sem Permissao");
-    const cookie = await seedOperator(seed.tenantId, "sales");
+    const cookie = await seedOperator(seed.tenantId, "gerente");
 
     const res = await request(createApp())
       .post("/access/scan")

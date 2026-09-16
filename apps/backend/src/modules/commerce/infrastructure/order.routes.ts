@@ -12,9 +12,9 @@ import {
 
 export const orderRouter = Router();
 
-orderRouter.get("/orders", requireAuth, requirePermission("order:manage"), txRoute(listOrdersController));
+orderRouter.get("/orders", requireAuth, requirePermission("order:read"), txRoute(listOrdersController));
 
-orderRouter.get("/orders/:id", requireAuth, requirePermission("order:manage"), txRoute(getOrderController));
+orderRouter.get("/orders/:id", requireAuth, requirePermission("order:read"), txRoute(getOrderController));
 
 /** Public, no requireAuth - account-less like checkout.routes.ts (spec: commerce/checkout - "Checkout can be submitted for payment"). */
 orderRouter.post(

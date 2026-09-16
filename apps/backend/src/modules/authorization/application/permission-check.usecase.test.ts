@@ -8,7 +8,7 @@ describe("PermissionCheckUseCase", () => {
 
   it("allows a role that has the requested permission", () => {
     expect(
-      useCase.execute({ actingTenantId: tenantId, roles: ["owner"], permission: "venue:manage" }),
+      useCase.execute({ actingTenantId: tenantId, roles: ["admin"], permission: "venue:manage" }),
     ).toBe(true);
   });
 
@@ -16,7 +16,7 @@ describe("PermissionCheckUseCase", () => {
     expect(
       useCase.execute({
         actingTenantId: tenantId,
-        roles: ["access_operator"],
+        roles: ["validador"],
         permission: "venue:manage",
       }),
     ).toBe(false);
@@ -27,7 +27,7 @@ describe("PermissionCheckUseCase", () => {
     expect(
       useCase.execute({
         actingTenantId: tenantId,
-        roles: ["owner"],
+        roles: ["admin"],
         permission: "venue:manage",
         resourceTenantId: otherTenantId,
       }),
@@ -38,10 +38,51 @@ describe("PermissionCheckUseCase", () => {
     expect(
       useCase.execute({
         actingTenantId: tenantId,
-        roles: ["owner"],
+        roles: ["admin"],
         permission: "venue:manage",
         resourceTenantId: tenantId,
       }),
     ).toBe(true);
+  });
+
+  describe("Venue scope (openspec change add-venue-scoped-user-roles)", () => {
+    const venueA = randomUUID();
+    const venueB = randomUUID();
+
+    it("allows an Admin (\"all\") for any resource Venue", () => {
+      expect(
+        useCase.execute({
+          actingTenantId: tenantId,
+          roles: ["admin"],
+          permission: "venue:manage",
+          callerVenueIds: "all",
+          resourceVenueId: venueB,
+        }),
+      ).toBe(true);
+    });
+
+    it("allows a Gerente scoped to the resource's Venue", () => {
+      expect(
+        useCase.execute({
+          actingTenantId: tenantId,
+          roles: ["gerente"],
+          permission: "venue:read",
+          callerVenueIds: [venueA],
+          resourceVenueId: venueA,
+        }),
+      ).toBe(true);
+    });
+
+    it("denies a Gerente scoped to a different Venue", () => {
+      expect(
+        useCase.execute({
+          actingTenantId: tenantId,
+          roles: ["gerente"],
+          permission: "venue:read",
+          callerVenueIds: [venueA],
+          resourceVenueId: venueB,
+        }),
+      ).toBe(false);
+    });
   });
 });

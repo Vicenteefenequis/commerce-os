@@ -106,7 +106,7 @@ async function seedAuthenticatedStaff(tenantId: string) {
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "owner" })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "admin" })
     .execute();
   const session = await db
     .insertInto("sessions")

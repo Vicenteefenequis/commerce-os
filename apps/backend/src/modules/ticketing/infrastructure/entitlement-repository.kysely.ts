@@ -6,6 +6,13 @@ export class KyselyEntitlementRepository implements EntitlementRepositoryPort {
   constructor(private readonly trx: Trx) {}
 
   async create(input: CreateEntitlementInput): Promise<Entitlement> {
+    const order = await this.trx
+      .selectFrom("orders")
+      .select("venue_id")
+      .where("tenant_id", "=", input.tenantId)
+      .where("id", "=", input.orderId)
+      .executeTakeFirstOrThrow();
+
     const row = await this.trx
       .insertInto("entitlements")
       .values({
@@ -14,6 +21,7 @@ export class KyselyEntitlementRepository implements EntitlementRepositoryPort {
         order_id: input.orderId,
         order_line_id: input.orderLineId,
         customer_id: input.customerId,
+        venue_id: order.venue_id,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
