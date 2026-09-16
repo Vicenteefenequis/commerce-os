@@ -65,12 +65,12 @@ describe("vendedor", () => {
 });
 
 describe("validador", () => {
-  it("grants entitlement:consume", () => {
-    expect(roleHasPermission("validador", "entitlement:consume")).toBe(true);
+  it.each<Permission>(["venue:read", "entitlement:consume"])("grants %s", (permission) => {
+    expect(roleHasPermission("validador", permission)).toBe(true);
   });
 
-  it.each<Permission>(["venue:read", "product:read", "resource:read", "order:read", "counter-sale:create"])(
-    "denies %s (scanning is this role's sole purpose)",
+  it.each<Permission>(["product:read", "resource:read", "order:read", "counter-sale:create"])(
+    "denies %s (scanning is this role's sole purpose beyond picking a Venue)",
     (permission) => {
       expect(roleHasPermission("validador", permission)).toBe(false);
     },

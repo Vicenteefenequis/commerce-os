@@ -41,8 +41,13 @@ export type Permission =
  *   sell) plus counter-sale:create - deliberately no order:read/manage,
  *   since the proposal restricts this role to the counter-sale screen
  *   only, not order history.
- * - validador: entitlement:consume only (scanning at the door is this
- *   role's sole purpose, same rationale the old access_operator had).
+ * - validador: venue:read (the scan screen needs to offer the
+ *   Validador's assigned Venue(s) to pick from - spec: access/scan -
+ *   "Every scan request SHALL carry the Venue... SHALL NOT infer... from
+ *   identity or role", so it can't be inferred, it has to be listed) plus
+ *   entitlement:consume, mirroring the old access_operator's permission
+ *   pair. Found missing during manual testing: without venue:read, the
+ *   Scanner screen's Venue selector came back empty for this role.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [
@@ -67,7 +72,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   gerente: ["venue:read", "venue:manage", "resource:read", "order:read"],
   vendedor: ["venue:read", "product:read", "resource:read", "counter-sale:create"],
-  validador: ["entitlement:consume"],
+  validador: ["venue:read", "entitlement:consume"],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {

@@ -67,14 +67,18 @@ async function seedTenantWithVenue(name: string) {
 }
 
 async function seedGerente(tenantId: string, venueId: string) {
+  return seedVenueScopedStaff(tenantId, "gerente", venueId);
+}
+
+async function seedVenueScopedStaff(tenantId: string, role: "gerente" | "vendedor" | "validador", venueId: string) {
   const userId = randomUUID();
   await db
     .insertInto("users")
-    .values({ id: userId, tenant_id: tenantId, email: `gerente-${userId}@example.com`, password_hash: "x" })
+    .values({ id: userId, tenant_id: tenantId, email: `${role}-${userId}@example.com`, password_hash: "x" })
     .execute();
   await db
     .insertInto("role_assignments")
-    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role: "gerente", venue_id: venueId })
+    .values({ id: randomUUID(), tenant_id: tenantId, user_id: userId, role, venue_id: venueId })
     .execute();
   const session = await db
     .insertInto("sessions")
@@ -193,4 +197,18 @@ describe.skipIf(!dbReachable)("GET /venues (live Postgres) - Venue scope (opensp
     const ids = (res.body.venues as Array<{ id: string }>).map((v) => v.id).sort();
     expect(ids).toEqual([venueAId, venueBId].sort());
   });
+
+  it.each(["vendedor", "validador"] as const)(
+    "lets a %s see their own assigned Venue (regression: the screen that needs to offer a Venue picker for this role must have venue:read)",
+    async (role) => {
+      const { tenantId, venueId } = await seedTenantWithVenue(`Regressao venue read ${role}`);
+      const cookie = await seedVenueScopedStaff(tenantId, role, venueId);
+
+      const res = await request(createApp()).get("/venues").set("Cookie", cookie);
+
+      expect(res.status).toBe(200);
+      const ids = (res.body.venues as Array<{ id: string }>).map((v) => v.id);
+      expect(ids).toEqual([venueId]);
+    },
+  );
 });
