@@ -91,3 +91,14 @@ The system SHALL allow an authorized actor within a Venue's owning Organization 
 #### Scenario: Venue without an age restriction omits it from display
 - **WHEN** a Venue has no `ageRestriction` set
 - **THEN** the system treats it as having no age restriction, without error, on any read
+
+### Requirement: Venue listing is scoped to the caller's assigned Venue(s)
+Listing an Organization's Venues SHALL return every Venue in the Organization for an Admin, and only the Venue(s) a Gerente/Vendedor/Validador's role assignment(s) are scoped to for any other role.
+
+#### Scenario: Admin lists every Venue
+- **WHEN** an identity holding the Admin role lists Venues for their Organization
+- **THEN** the system returns every Venue belonging to that Organization
+
+#### Scenario: Gerente lists only their assigned Venue
+- **WHEN** an identity holding the Gerente role scoped to Venue A lists Venues for their Organization
+- **THEN** the system returns only Venue A, even when the Organization has other Venues
