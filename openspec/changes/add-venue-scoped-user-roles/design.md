@@ -1,0 +1,53 @@
+## Context
+
+Today's authorization stack (`apps/backend/src/modules/authorization/`) is tenant-scoped only: `role_assignments(tenant_id, user_id, role)` holds a flat role per user, `PermissionCheckUseCase` checks tenant match plus a fixed `ROLE_PERMISSIONS[role]` lookup, and `requirePermission(permission)` gates individual routes. Ownership isolation is enforced not in application code but by Postgres Row Level Security: `txRoute` (`apps/backend/src/http/tx-route.ts`) sets `app.tenant_id` as a transaction-local Postgres setting before every handler runs, and RLS policies filter every tenant-owned table on it — "a resource belonging to another tenant simply will not be visible/matched" (comment on `require-permission.middleware.ts`). The admin nav (`admin-nav.tsx`) renders every link unconditionally; nothing today reads role to decide what's visible or reachable.
+
+See `proposal.md` for the motivation. This document covers how Venue-scoped roles slot into that existing tenant-RLS pattern rather than inventing a new enforcement mechanism.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Extend the existing tenant-level RLS pattern to also express "this identity is restricted to Venue(s) X, Y" for Gerente/Vendedor/Validador, and "unrestricted" for Admin.
+- Keep ownership enforcement at the database layer (consistent with the existing tenant model), not scattered across route handlers.
+- Redact Order monetary fields for Gerente without introducing a parallel serialization path per endpoint.
+
+**Non-Goals:**
+- A user invitation/signup flow. This change only manages role assignments for users who already exist in `users`; creating new user accounts is unaffected.
+- Custom/user-defined roles or a permission-editor UI. The four roles and their permissions stay fixed in code, same as today's `ROLE_PERMISSIONS` (the original IAM-002 decision this replaces).
+- Retroactively reinterpreting historical `audit_log`/`order_status_history` rows recorded under the old role names.
+
+## Decisions
+
+### D1: Role enum replacement, not an addition
+`ROLES` in `domain/role.ts` becomes `["admin", "gerente", "vendedor", "validador"]`, replacing the current seven. `ROLE_PERMISSIONS` is rewritten for the four roles per the proposal's access matrix. Alternative considered: keep the old seven and layer the new four on top as aliases — rejected because it doubles the permission surface to reason about indefinitely for no behavior anyone asked for; the proposal already accepts this as a **BREAKING** change.
+
+### D2: Venue scope travels with the role assignment, not the permission
+`role_assignments` gains a nullable `venue_id` column (FK to `venues`), with a unique constraint on `(tenant_id, user_id, role, venue_id)` to prevent duplicate assignments. `venue_id IS NULL` is only valid for `role = 'admin'` and means "every Venue in the tenant"; `gerente`/`vendedor`/`validador` rows always carry a `venue_id`. This is enforced by an application-level check in the assignment use case (`foundation/user-management`), not a DB constraint, because Postgres check constraints can't easily express "required unless role = admin" together with the FK. Alternative considered: a separate `role_venue_scopes` join table — rejected as unnecessary since each assignment maps to at most one Venue (no requirement for multi-Venue-per-assignment; multi-Venue-per-user is already covered by multiple assignment rows).
+
+### D3: Venue scoping is enforced the same way tenant scoping is: RLS + a transaction-local setting
+`resolveIdentity` (or a new step run alongside it) resolves the caller's Venue scope from `role_assignments` into `Identity.venueIds: string[] | "all"`. `txRoute` sets a second transaction-local Postgres setting, `app.venue_ids`, from that value (empty string sentinel for `"all"`). Every RLS policy on a Venue-owned table (`venues`, `products`, `resources`, `orders`, `reservations`, `entitlements`, `tickets`, `scan_attempts`, …) gets an additional clause: `current_setting('app.venue_ids', true) = '' OR venue_id = ANY(string_to_array(current_setting('app.venue_ids', true), ',')::uuid[])`. Alternative considered: check Venue scope in each use case/repository call — rejected because it repeats the exact mistake the tenant model already moved away from (per `tx-route.ts`'s own comment: RLS holds even if a repository forgets its own filter); pushing Venue scope into the same DB-level mechanism keeps that guarantee for the new dimension too.
+
+### D4: Monetary redaction for Gerente is an application-layer response concern, not RLS
+RLS can restrict *rows*, not *columns*. Hiding `unit_price_cents`, order totals, and Payment amounts for a Gerente is implemented as a single shared serialization step in the Order retrieval path (list and detail) that strips those fields when `identity.roles` is exactly `["gerente"]` for the request. Alternative considered: a restricted Postgres view lacking those columns, switched on a session variable — rejected as significantly more moving parts (view maintenance, column drift risk) for a projection need with only one exception case today.
+
+### D5: Dashboard/nav access is a role check, not a new fine-grained permission
+Rather than inventing a `dashboard:read` permission, the Dashboard route and the counter-sale/scan routes keep using `requirePermission`, and a plain role-identity check (`identity.roles.includes("admin")`) gates the dashboard summary route specifically, matching the proposal's "Admin only" rule. The frontend nav (`admin-nav.tsx`) filters links from the already-resolved identity/roles for UX; this is cosmetic, not a security boundary — the backend check is what the spec (`admin/dashboard` - "Dashboard access is restricted to the Admin role") actually requires, consistent with the existing "Server-side enforcement of permissions" requirement.
+
+### D6: New `user:manage` permission, Admin-only, never Venue-scoped
+Listing users and creating/revoking role assignments needs its own permission distinct from the existing set (`organization:manage` is closest but conflates with org profile changes). `user:manage` is added to `Permission` and granted only to `admin`. Assignment creation/revocation always operates within the caller's own tenant (existing tenant RLS already covers this); it doesn't need Venue scoping on the *permission* itself, since the Venue being assigned is a parameter of the operation, not a property of who's allowed to call it.
+
+## Risks / Trade-offs
+
+- **[Risk]** A route or repository query added later that touches a Venue-owned table but forgets to route through a Venue-scoped RLS policy would silently return unrestricted data for Gerente/Vendedor/Validador. → Mitigation: add a migration-level checklist item (see `tasks.md`) enumerating every Venue-owned table and its updated policy, plus an integration test per table asserting Venue isolation, mirroring the existing tenant-isolation tests.
+- **[Risk]** `app.venue_ids` as a comma-joined string parsed back into a Postgres array is fragile if a Venue id ever contained a comma (it can't, UUIDs) but is still an easy pattern to get wrong when extended later. → Mitigation: centralize the encode/decode in one helper next to `txRoute`, not duplicated per route.
+- **[Risk]** Legacy `role_assignments` rows use role names (`owner`, `finance`, `sales`, `operator`, `access_operator`, `read_only`) that no longer exist once `ROLES` changes, and none of them carry a `venue_id`. → Mitigation: see Migration Plan; no automatic guess at which Venue a legacy Sales/Operator/Access Operator user should be scoped to — that's a judgment call left to the Organization's new Admin.
+- **[Trade-off]** Field redaction (D4) lives in the response-serialization layer rather than the DB, so it protects only paths that go through the shared serializer. Any future endpoint exposing Order data must remember to reuse it. Accepted because the alternative (D4's rejected view-based approach) is disproportionate for one redaction rule today.
+
+## Migration Plan
+
+1. **Schema**: add `role_assignments.venue_id uuid null references venues(id)`; add the unique constraint from D2; update RLS policies per D3.
+2. **Backfill / cutover** (single release, since this is already an accepted **BREAKING** change with no compatibility bridge planned):
+   - Every existing `owner` or `admin` role assignment becomes `admin` (`venue_id` stays null).
+   - Every existing `finance`, `sales`, `operator`, `access_operator`, or `read_only` assignment is archived (moved to an audit record, not silently dropped) and removed from `role_assignments`. These users lose admin access until an Admin re-assigns them to Gerente/Vendedor/Validador with an explicit Venue — this can't be inferred safely from the old data, since none of those roles carried Venue information.
+   - The deploy notes/release communication should flag this explicitly: any org with Sales/Operator/Access Operator staff needs its Admin to redo those assignments post-deploy via the new Usuários screen.
+3. **Rollback**: keep the archived legacy-role records for at least one release cycle so a rollback can restore the previous `role_assignments` rows if needed; don't hard-delete them in the same migration that removes the old `ROLES` values from code.
