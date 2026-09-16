@@ -172,3 +172,75 @@ describe.skipIf(!dbReachable)("foundation/user-management (live Postgres)", () =
     expect(res.status).toBe(404);
   });
 });
+
+/**
+ * spec: foundation/user-management - "Admin creates a new user together
+ * with their first role assignment" (openspec change
+ * add-venue-scoped-user-roles, design.md D7).
+ */
+describe.skipIf(!dbReachable)("POST /users (live Postgres)", () => {
+  it("creates a user with a Venue-scoped role and that user can immediately log in with it", async () => {
+    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Create User");
+    const { cookie: adminCookie } = await seedStaff(tenantId, "admin");
+
+    const createRes = await request(createApp())
+      .post("/users")
+      .set("Cookie", adminCookie)
+      .send({ email: "novo-vendedor@example.com", password: "senha-forte-123", role: "vendedor", venueId });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.userId).toBeDefined();
+
+    const loginRes = await request(createApp())
+      .post("/auth/login")
+      .send({ tenantId, email: "novo-vendedor@example.com", password: "senha-forte-123" });
+    expect(loginRes.status).toBe(200);
+
+    const cookie = loginRes.headers["set-cookie"];
+    expect(cookie).toBeDefined();
+    const meRes = await request(createApp()).get("/auth/me").set("Cookie", cookie!);
+    expect(meRes.status).toBe(200);
+    expect(meRes.body.roles).toEqual(["vendedor"]);
+    expect(meRes.body.venueIds).toEqual([venueId]);
+  });
+
+  it("creates a user with the Admin role and no Venue", async () => {
+    const { tenantId } = await seedTenantWithVenue("Zoo Create Admin User");
+    const { cookie } = await seedStaff(tenantId, "admin");
+
+    const res = await request(createApp())
+      .post("/users")
+      .set("Cookie", cookie)
+      .send({ email: "novo-admin@example.com", password: "senha-forte-123", role: "admin", venueId: null });
+
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects a duplicate email within the same Organization", async () => {
+    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Create User Duplicado");
+    const { cookie } = await seedStaff(tenantId, "admin");
+
+    await request(createApp())
+      .post("/users")
+      .set("Cookie", cookie)
+      .send({ email: "duplicado@example.com", password: "senha-forte-123", role: "vendedor", venueId });
+
+    const res = await request(createApp())
+      .post("/users")
+      .set("Cookie", cookie)
+      .send({ email: "duplicado@example.com", password: "outra-senha", role: "validador", venueId });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("denies a non-admin from creating a user", async () => {
+    const { tenantId, venueId } = await seedTenantWithVenue("Zoo Create User Denied");
+    const { cookie } = await seedStaff(tenantId, "vendedor", venueId);
+
+    const res = await request(createApp())
+      .post("/users")
+      .set("Cookie", cookie)
+      .send({ email: "outro@example.com", password: "senha-forte-123", role: "vendedor", venueId });
+
+    expect(res.status).toBe(403);
+  });
+});

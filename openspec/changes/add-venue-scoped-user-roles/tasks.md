@@ -26,6 +26,10 @@
 
   New module `apps/backend/src/modules/user-management/` (domain/ports, `CreateRoleAssignmentUseCase`/`ListUsersUseCase`/`RevokeRoleAssignmentUseCase`, Kysely repository, controller, routes at `GET/POST /users`, `POST /users/role-assignments`, `DELETE /users/role-assignments/:id`), registered in `app.ts`. `CreateRoleAssignmentUseCase` covers all 3 spec validation rules with a fake-repository unit test (7 cases); route tests (8 cases) cover 401/403/list/create/reject-without-venue/multi-role-per-user, and the revoke-takes-effect-immediately case: seeds a Validador, confirms `/access/scan` doesn't 403 for them, revokes the assignment via the API, then confirms the very next `/access/scan` call 403s with no session change. All against live Postgres.
 
+- [x] 3.4 Add `CreateUserWithRoleAssignmentUseCase` (design.md D7): creates a new user (email + Admin-supplied password, hashed via the existing `PasswordHasherPort`) and their first role assignment together, checking email uniqueness within the Organization before creating (`findByTenantAndEmail`, same pattern as `CreateOrganizationUseCase`'s slug check) and reusing the same role/Venue validation as `CreateRoleAssignmentUseCase`; wire a new `POST /users` route gated by `user:manage`; verify unit tests for the validation rules in the updated `specs/foundation/user-management/spec.md` (Venue-scoped role, Admin role with no Venue, duplicate email in the same Organization rejected, same email across different Organizations both succeed) plus a route test exercising create-then-login-as-that-user end to end.
+
+  Extracted the shared role/Venue validation into `validate-role-and-venue.ts`, reused by both `CreateRoleAssignmentUseCase` and the new `CreateUserWithRoleAssignmentUseCase`. Unit tests (8 cases, fake repos) plus route tests (4 cases) including the literal "create then log in as that new user, confirm /auth/me reports the right role and Venue" scenario. Full suite: 442/442.
+
 ## 4. Admin dashboard gating
 
 - [x] 4.1 Add a role check to the dashboard summary route (`apps/backend/src/modules/admin/infrastructure/dashboard.routes.ts`) denying any identity without the Admin role; verify with a route test asserting Gerente/Vendedor/Validador get 403.
@@ -63,6 +67,9 @@
 - [x] 8.2 Update the Pedidos screen to hide monetary columns/fields when the session's role is Gerente (matching the backend redaction), showing status and other fields as normal; verify with a component test.
 - [x] 8.3 Build the new `/admin/users` screen (Admin only): list users with their role/Venue assignments, and a form to create/revoke an assignment (role + Venue picker, Venue picker disabled/hidden for Admin role); verify by exercising create and revoke through the running app.
 - [x] 8.4 Ensure the Venue selector on Dashboard/Pedidos/Unidades only offers Venues the session is scoped to (Admin: all; others: their assigned Venue(s)); verify with a component test.
+- [x] 8.5 Add a "Novo usuário" action to `/admin/users` (design.md D7): a form with email, password, role, and (when required) Venue, calling the new `POST /users` route from task 3.4; keep the existing "Nova atribuição" action for adding a role to an already-listed user; verify by creating a user through the running app and logging in as them.
+
+  Extended `ListPageLayout` with an optional `secondaryAction` prop (backward-compatible - every existing caller keeps its single-button layout) rather than duplicating that shared header, so `/admin/users` can offer both "Novo usuário" (primary) and "Nova atribuição" (secondary) side by side. `next build` clean.
 
   8.1: new `apps/web/lib/roles.ts` (`ROLE_LINKS`/`navLinksForRoles`, shared with the login redirect from task 4.2) drives `AdminNav`'s link list from `/auth/me`'s `roles`.
 

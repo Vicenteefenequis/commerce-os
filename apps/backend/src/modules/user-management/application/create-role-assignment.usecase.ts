@@ -1,9 +1,8 @@
-import { ROLES, type Role } from "../../authorization/domain/role.js";
 import type { VenueRepositoryPort } from "../../venue/domain/ports.js";
 import type { UserManagementRepositoryPort } from "../domain/ports.js";
+import { validateRoleAndVenue } from "./validate-role-and-venue.js";
 
-export class InvalidRoleError extends Error {}
-export class InvalidRoleAssignmentError extends Error {}
+export { InvalidRoleError, InvalidRoleAssignmentError } from "./validate-role-and-venue.js";
 export class UserNotFoundError extends Error {}
 export class AssignmentVenueNotFoundError extends Error {}
 
@@ -27,18 +26,7 @@ export class CreateRoleAssignmentUseCase {
   ) {}
 
   async execute(input: CreateRoleAssignmentInput): Promise<{ id: string }> {
-    if (!(ROLES as readonly string[]).includes(input.role)) {
-      throw new InvalidRoleError(`unknown role: ${input.role}`);
-    }
-    const role = input.role as Role;
-
-    if (role === "admin") {
-      if (input.venueId !== null) {
-        throw new InvalidRoleAssignmentError("an Admin assignment must not specify a Venue");
-      }
-    } else if (input.venueId === null) {
-      throw new InvalidRoleAssignmentError(`a ${role} assignment must specify a Venue`);
-    }
+    const role = validateRoleAndVenue(input.role, input.venueId);
 
     const userExists = await this.userManagement.userExistsInTenant(input.tenantId, input.userId);
     if (!userExists) {

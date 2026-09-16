@@ -45,6 +45,25 @@ The system SHALL allow a user to hold more than one role assignment simultaneous
 - **WHEN** a user holds more than one role assignment and one of them is revoked
 - **THEN** the remaining assignment(s) continue to grant their permissions unaffected
 
+### Requirement: Admin creates a new user together with their first role assignment
+The system SHALL allow an identity holding the Admin role to create a new user - with an email and an Admin-supplied initial password - and their first role assignment (role, and Venue when required) in a single action. The new user's email SHALL be unique within the Organization. This does not replace assigning an additional role to an already-existing user (a separate action).
+
+#### Scenario: Admin creates a user with a Venue-scoped role
+- **WHEN** an identity holding the Admin role submits an email, a password, and a Gerente/Vendedor/Validador role with a Venue belonging to the same Organization
+- **THEN** the system creates a new user in that Organization with the given email and password, and a role assignment for that role and Venue
+
+#### Scenario: Admin creates a user with the Admin role
+- **WHEN** an identity holding the Admin role submits an email, a password, and the Admin role
+- **THEN** the system creates a new user in that Organization with an org-wide Admin assignment (no Venue)
+
+#### Scenario: Duplicate email within the same Organization is rejected
+- **WHEN** an Admin submits an email that already belongs to a user in the same Organization
+- **THEN** the system rejects the request and creates neither a user nor a role assignment
+
+#### Scenario: Same email is allowed across different Organizations
+- **WHEN** two different Organizations each create a user with the same email
+- **THEN** both users are created successfully, since email uniqueness is scoped to the owning Organization
+
 ### Requirement: Revoking a role assignment takes effect immediately
 Revoking a role assignment SHALL immediately deny any operation that assignment previously permitted, without requiring the affected user to log out or their session to expire.
 

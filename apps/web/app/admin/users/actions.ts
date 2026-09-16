@@ -3,6 +3,36 @@
 import { revalidatePath } from "next/cache";
 import { backendFetch } from "@/lib/backend-fetch";
 
+export interface CreateUserActionResult {
+  error?: string;
+  field?: "email" | "password" | "role" | "venueId";
+}
+
+/** spec: foundation/user-management - "Admin creates a new user together with their first role assignment". */
+export async function createUser(formData: FormData): Promise<CreateUserActionResult> {
+  const role = formData.get("role");
+  const venueId = formData.get("venueId");
+
+  const response = await backendFetch("/users", {
+    method: "POST",
+    body: JSON.stringify({
+      email: formData.get("email"),
+      password: formData.get("password"),
+      role,
+      venueId: role === "admin" ? null : venueId || null,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const error: string = body.error ?? "Falha ao criar usuário";
+    return { error, field: response.status === 409 ? "email" : undefined };
+  }
+
+  revalidatePath("/admin/users");
+  return {};
+}
+
 export interface CreateRoleAssignmentActionResult {
   error?: string;
 }

@@ -6,10 +6,11 @@ import { FormPageLayout } from "@/components/layout/form-page-layout";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { createRoleAssignment, revokeRoleAssignment } from "./actions";
+import { createRoleAssignment, createUser, revokeRoleAssignment } from "./actions";
 import type { UserWithAssignments, VenueOption } from "./page";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -38,16 +39,25 @@ interface AssignmentRow {
 
 /**
  * spec: foundation/user-management - Admin-only screen to list an
- * Organization's users with their role assignments, and create/revoke a
- * Venue-scoped assignment. One row per assignment (a user with more than
- * one assignment appears more than once).
+ * Organization's users with their role assignments; create a brand-new
+ * user together with their first role assignment ("Novo usuário"); assign
+ * an additional role to an already-listed user ("Nova atribuição"); and
+ * revoke an assignment. One row per assignment (a user with more than one
+ * assignment appears more than once).
  */
 export function UsersContent({ users, venues }: { users: UserWithAssignments[]; venues: VenueOption[] }) {
   const { showToast } = useToast();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createUserErrors, setCreateUserErrors] = useState<Record<string, string>>({});
+  const [newUserRole, setNewUserRole] = useState<string>("");
+
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [role, setRole] = useState<string>("");
+
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const venueNameById = new Map(venues.map((v) => [v.id, v.name]));
@@ -64,12 +74,36 @@ export function UsersContent({ users, venues }: { users: UserWithAssignments[]; 
     })),
   );
 
-  function resetCreateForm() {
+  function resetCreateUserForm() {
+    setNewUserRole("");
+    setCreateUserErrors({});
+  }
+
+  async function onCreateUserSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsCreatingUser(true);
+    setCreateUserErrors({});
+
+    const formData = new FormData(event.currentTarget);
+    const result = await createUser(formData);
+
+    setIsCreatingUser(false);
+    if (result.error) {
+      setCreateUserErrors({ [result.field ?? "email"]: result.error });
+      return;
+    }
+
+    setCreateUserDialogOpen(false);
+    resetCreateUserForm();
+    showToast({ title: "Usuário criado", variant: "success" });
+  }
+
+  function resetAssignForm() {
     setRole("");
     setFieldErrors({});
   }
 
-  async function onCreateSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onAssignSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
     setFieldErrors({});
@@ -83,8 +117,8 @@ export function UsersContent({ users, venues }: { users: UserWithAssignments[]; 
       return;
     }
 
-    setCreateDialogOpen(false);
-    resetCreateForm();
+    setAssignDialogOpen(false);
+    resetAssignForm();
     showToast({ title: "Atribuição criada", variant: "success" });
   }
 
@@ -104,8 +138,9 @@ export function UsersContent({ users, venues }: { users: UserWithAssignments[]; 
       <ListPageLayout
         title="Usuários"
         description="Usuários da organização e suas permissões de acesso ao painel administrativo."
-        createLabel="Nova atribuição"
-        onCreate={() => setCreateDialogOpen(true)}
+        createLabel="Novo usuário"
+        onCreate={() => setCreateUserDialogOpen(true)}
+        secondaryAction={{ label: "Nova atribuição", onClick: () => setAssignDialogOpen(true) }}
         isEmpty={rows.length === 0}
         emptyStateDescription="Nenhuma atribuição de permissão encontrada."
       >
@@ -142,18 +177,50 @@ export function UsersContent({ users, venues }: { users: UserWithAssignments[]; 
       </ListPageLayout>
 
       <Dialog
-        open={createDialogOpen}
+        open={createUserDialogOpen}
         onOpenChange={(open) => {
-          setCreateDialogOpen(open);
-          if (!open) resetCreateForm();
+          setCreateUserDialogOpen(open);
+          if (!open) resetCreateUserForm();
         }}
-        title="Nova atribuição"
-        description="Atribui uma permissão a um usuário já existente na organização."
+        title="Novo usuário"
+        description="Cria um usuário novo na organização e já atribui sua primeira permissão."
       >
         <FormPageLayout
           title=""
-          onSubmit={onCreateSubmit}
-          onCancel={() => setCreateDialogOpen(false)}
+          onSubmit={onCreateUserSubmit}
+          onCancel={() => setCreateUserDialogOpen(false)}
+          isSubmitting={isCreatingUser}
+          fieldErrors={createUserErrors}
+        >
+          <Input label="E-mail" name="email" type="email" required />
+          <Input label="Senha" name="password" type="password" required minLength={8} />
+          <Select
+            label="Permissão"
+            name="role"
+            options={ROLE_OPTIONS}
+            value={newUserRole}
+            onValueChange={setNewUserRole}
+            placeholder="Selecione uma permissão"
+          />
+          {newUserRole && newUserRole !== "admin" && (
+            <Select label="Unidade" name="venueId" options={venueOptions} placeholder="Selecione uma unidade" />
+          )}
+        </FormPageLayout>
+      </Dialog>
+
+      <Dialog
+        open={assignDialogOpen}
+        onOpenChange={(open) => {
+          setAssignDialogOpen(open);
+          if (!open) resetAssignForm();
+        }}
+        title="Nova atribuição"
+        description="Atribui uma permissão adicional a um usuário já existente na organização."
+      >
+        <FormPageLayout
+          title=""
+          onSubmit={onAssignSubmit}
+          onCancel={() => setAssignDialogOpen(false)}
           isSubmitting={isSubmitting}
           fieldErrors={fieldErrors}
         >

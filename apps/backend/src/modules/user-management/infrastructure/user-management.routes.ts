@@ -4,6 +4,7 @@ import { requireAuth } from "../../../http/middleware/require-auth.js";
 import { requirePermission } from "../../authorization/infrastructure/require-permission.middleware.js";
 import {
   createRoleAssignmentController,
+  createUserController,
   listUsersController,
   revokeRoleAssignmentController,
 } from "./user-management.controller.js";
@@ -20,6 +21,13 @@ userManagementRouter.get(
   requireAuth,
   requirePermission("user:manage"),
   txRoute(listUsersController),
+);
+
+userManagementRouter.post(
+  "/users",
+  requireAuth,
+  requirePermission("user:manage"),
+  txRoute(createUserController),
 );
 
 userManagementRouter.post(

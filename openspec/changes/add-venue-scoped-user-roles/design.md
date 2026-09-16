@@ -12,7 +12,7 @@ See `proposal.md` for the motivation. This document covers how Venue-scoped role
 - Redact Order monetary fields for Gerente without introducing a parallel serialization path per endpoint.
 
 **Non-Goals:**
-- A user invitation/signup flow. This change only manages role assignments for users who already exist in `users`; creating new user accounts is unaffected.
+- An email-based invitation flow (a signup link the new user completes themselves), a "change password on first login" flow, or any password-reset/forgot-password mechanism. The Admin sets the new user's initial password directly, in the same form that creates the user and assigns their first role - the user does not have their own step in this process. (Revised from this design's original position of not letting Admin create users at all - see D7.)
 - Custom/user-defined roles or a permission-editor UI. The four roles and their permissions stay fixed in code, same as today's `ROLE_PERMISSIONS` (the original IAM-002 decision this replaces).
 - Retroactively reinterpreting historical `audit_log`/`order_status_history` rows recorded under the old role names.
 
@@ -39,6 +39,13 @@ Rather than inventing a `dashboard:read` permission, the Dashboard route and the
 
 ### D6: New `user:manage` permission, Admin-only, never Venue-scoped
 Listing users and creating/revoking role assignments needs its own permission distinct from the existing set (`organization:manage` is closest but conflates with org profile changes). `user:manage` is added to `Permission` and granted only to `admin`. Assignment creation/revocation always operates within the caller's own tenant (existing tenant RLS already covers this); it doesn't need Venue scoping on the *permission* itself, since the Venue being assigned is a parameter of the operation, not a property of who's allowed to call it.
+
+### D7: Admin can create a brand-new user, in the same action as their first role assignment
+Discovered missing during manual local testing of this change: with the original Non-Goal ("no invitation/signup flow") as written, there was no way for a user to exist in an Organization at all except the one owner/admin created alongside the Organization itself (`CreateTenantWithOwnerUseCase`) - making the entire Usuários screen unable to onboard anyone in practice. `foundation/user-management` gains a second write path, `CreateUserWithRoleAssignmentUseCase`, alongside the existing "assign a role to an already-listed user" one: it takes an email, a plaintext password (hashed the same way login already does, via `PasswordHasherPort`), a role, and (when required) a Venue, and creates the `users` row and the first `role_assignments` row together. Email uniqueness is checked the same way `CreateOrganizationUseCase` checks slug uniqueness - `findByTenantAndEmail` before insert, not a caught unique-constraint violation. The existing "assign another role to an existing user" action is kept as-is (e.g. adding Validador to someone who's already Vendedor) - this is additive, not a replacement.
+
+Alternative considered: a separate "create user" step followed by a separate "assign role" step - rejected per explicit product direction (single form is simpler for the common case: a brand-new hire needs an account and a role at the same time, not one without the other).
+
+Alternative considered: generate a temporary password and force a change on first login - rejected for now (real added complexity - a password-change flow doesn't exist anywhere in this app yet) in favor of the Admin setting the initial password directly and communicating it out-of-band, consistent with how this whole app already has no self-service password reset.
 
 ## Risks / Trade-offs
 
